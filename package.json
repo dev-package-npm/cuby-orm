@@ -1,0 +1,33 @@
+{
+  "name": "cuby-orm",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev-package-npm/cuby-orm.git"
+  },
+  "keywords": [
+    "orm",
+    "mysql",
+    "cli",
+    "databases",
+    "migration",
+    "seeds",
+    "models"
+  ],
+  "author": "Jairo Rohatan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dev-package-npm/cuby-orm/issues"
+  },
+  "homepage": "https://github.com/dev-package-npm/cuby-orm#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "dotenv-expand": "^10.0.0",
+    "promise-mysql": "^5.2.0"
+  }
+}
