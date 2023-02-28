@@ -1,17 +1,57 @@
 import { Database, PoolConnection } from "../../settings/database";
-import { IFields } from "./interfaces/forge.interface";
+import { IFields, TForeignKey, TSqlAttribute, TTableAttribute, TTforeign as TTforeignKeyStructure } from "./interfaces/forge.interface";
 
 export class Forge extends Database {
     protected db;
     private fields: string[] = [];
     private sqlQuery: string = '';
 
+    private tableAttributes: TTableAttribute[] = [
+        {
+            attribute: 'isPrimariKey',
+            value: 'PRIMARY KEY'
+        },
+        {
+            attribute: 'isNotNull',
+            value: 'NOT NULL'
+        },
+        {
+            attribute: 'isUnique',
+            value: 'UNIQUE'
+        },
+        {
+            attribute: 'isAutoincrement',
+            value: 'AUTO_INCREMENT'
+        },
+        {
+            attribute: 'constraint',
+            value: 'TABLE'
+        },
+        {
+            attribute: 'comments',
+            value: 'COMMENT'
+        },
+        {
+            attribute: 'default',
+            value: 'DEFAULT'
+        },
+        {
+            attribute: 'foreignKey',
+            value: <TTforeignKeyStructure>{
+                foreignKey: 'FOREIGN KEY',
+                reference: 'REFERENCES',
+                onDelete: 'ON DELETE',
+                onUpdate: 'ON UPDATE'
+            }
+        }
+    ]
+
+    private sqlStr: string = '';
     private createTableStr: string = 'CREATE TABLE';
     private dropTableStr: string = 'DROP TABLE';
+    private alterTableStr: string = 'ALTER TABLE';
     private ifExistsStr: string = 'IF EXISTS';
-    private primaryKeyStr: string = 'PRIMARY KEY';
-    private notNullStr: string = 'NOT NULL';
-    private unsignedStr: string = 'UNSIGNED';
+    private addConstraintStr: string = 'ADD CONSTRAINT';
 
     constructor() {
         super();
@@ -23,22 +63,44 @@ export class Forge extends Database {
         for (const item of Object.keys(fields)) {
             this.fields.push(this.orderFields(item, fields));
         }
+        if (this.sqlStr != '') {
+            this.fields.push(this.sqlStr);
+            this.sqlStr = '';
+        }
     }
 
     protected async createTable(name: string) {
         this.sqlQuery = `${this.createTableStr} \`${name}\` (
-            ${this.fields}
-            )`;
-        console.log(this.sqlQuery);
+            ${this.fields.join(',\n')}
+            );`;
+        if (this.sqlStr != '') {
+            this.sqlQuery += '\n' + this.sqlStr;
+            this.sqlStr = '';
+        }
+        // console.log(this.sqlQuery);
+        return await this.executeQuery(this.sqlQuery);
+    }
 
-        // return await this.executeQuery(this.sqlQuery);
-        // const data = await (await this.db()).query('select * from users');
+    protected async addForeignKey(table: string, data: TForeignKey) {
+        const tableAttributes = (<TTforeignKeyStructure>this.tableAttributes.find(item => item.attribute == 'foreignKey')?.value)
+        this.sqlStr = `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
+        if (data.onDelete != undefined) {
+            this.sqlStr += ` ${tableAttributes.onDelete} ${data.onDelete}`;
+        }
+        if (data.onUpdate != undefined) {
+            this.sqlStr += ` ${tableAttributes.onUpdate} ${data.onUpdate}`;
+        }
+        this.sqlStr += ';';
     }
 
     protected async dropTable(name: string) {
         this.sqlQuery = `${this.dropTableStr} \`${name}\``;
-        console.log(this.sqlQuery);
-        // const data = await (await this.db()).query('select * from users');
+        return await this.executeQuery(this.sqlQuery);
+    }
+
+    protected async dropTableIfExists(name: string) {
+        this.sqlQuery = `${this.dropTableStr} ${this.ifExistsStr} \`${name}\``;
+        // console.log(this.sqlQuery);
         return await this.executeQuery(this.sqlQuery);
     }
 
@@ -51,16 +113,28 @@ export class Forge extends Database {
     }
 
     private orderFields(item: string, fields: IFields) {
-        let value = `\`${item}\` ${fields[item].type}${fields[item].constraint != undefined ? `(${fields[item].constraint})` : ''}`;
-        console.log(Object.getOwnPropertyNames(fields[item]));
-        // switch (Object.getOwnPropertyNames(item)) {
-        //     case :
+        let value = `\`${item}\` ${fields[item].type}${this.validateAttribute('constraint', fields[item]) ? `(${fields[item].constraint})` : ''}`;
 
-        //         break;
-
-        //     default:
-        //         break;
-        // }
+        for (const item2 of this.tableAttributes) {
+            if (this.validateAttribute(item2.attribute, fields[item]) && item2.attribute != 'constraint') {
+                if (item2.attribute == 'comments') {
+                    value += ` ${item2.value} "${fields[item].comments}"`
+                } else if (item2.attribute == 'default') {
+                    value += ` ${item2.value} ${fields[item].default}`;
+                }
+                else if (item2.attribute != 'foreignKey')
+                    value += ' ' + item2.value;
+                else if (item2.attribute == 'foreignKey') {
+                    this.sqlStr += `${(<TTforeignKeyStructure>item2.value).foreignKey} (\`${item}\`) ${(<TTforeignKeyStructure>item2.value).reference} \`${fields[item].foreignKey?.references.table}\`(\`${fields[item].foreignKey?.references.column}\`)`;
+                    if (fields[item].foreignKey?.onDelete != undefined) {
+                        this.sqlStr += ` ${(<TTforeignKeyStructure>item2.value).onDelete} ${fields[item].foreignKey?.onDelete}`;
+                    }
+                    if (fields[item].foreignKey?.onUpdate != undefined) {
+                        this.sqlStr += ` ${(<TTforeignKeyStructure>item2.value).onUpdate} ${fields[item].foreignKey?.onUpdate} `;
+                    }
+                }
+            }
+        }
         return value;
     }
 
@@ -69,5 +143,9 @@ export class Forge extends Database {
         await (await this.db()).release();
         (await this.db()).destroy();
         return results;
+    }
+
+    private validateAttribute(attribute: keyof TSqlAttribute, fields: TSqlAttribute) {
+        return fields?.[attribute] != undefined && (fields?.[attribute] == true || typeof fields?.[attribute] == 'number' || typeof fields?.[attribute] == 'string' || typeof fields?.[attribute] == 'object') ? true : false;
     }
 }

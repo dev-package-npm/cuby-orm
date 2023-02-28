@@ -8,7 +8,16 @@ export class User extends Migration {
             let fields: IFields = {
                 id: {
                     type: 'INT',
+                    isAutoincrement: true,
+                    isNotNull: true,
                     isPrimariKey: true
+                },
+                user_id: {
+                    type: 'INT'
+                },
+                age: {
+                    type: 'INT',
+                    isUnique: true,
                 },
                 user_name: {
                     type: 'VARCHAR',
@@ -16,13 +25,20 @@ export class User extends Migration {
                     isNotNull: true
                 },
                 first_name: {
-                    type: 'TEXT'
+                    type: 'TEXT',
+                    comments: 'primer nombre'
                 },
                 last_name: {
-                    type: 'TEXT'
+                    type: 'TEXT',
+                    comments: 'segundo nombre'
+                },
+                create_at: {
+                    type: 'DATETIME',
+                    default: 'NOW()'
                 }
             }
             this.addField(fields);
+            this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
             await this.createTable(this.table);
         } catch (error: any) {
             console.log(error.message);
@@ -31,7 +47,7 @@ export class User extends Migration {
 
     async down(): Promise<void> {
         try {
-            // await this.dropTable(this.table);
+            await this.dropTableIfExists(this.table);
         } catch (error: any) {
             console.log(error.message);
         }
