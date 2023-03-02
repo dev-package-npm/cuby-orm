@@ -1,11 +1,11 @@
-import { IFields } from "../../core/database/interfaces/forge.interface";
+import { TColumns } from "../../core/database/interfaces/forge.interface";
 import { Migration } from "../../core/database/migration";
 
 export class User extends Migration {
     private table: string = 'users2';
     async up(): Promise<void> {
         try {
-            let fields: IFields = {
+            let fields: TColumns = {
                 id: {
                     type: 'INT',
                     isAutoincrement: true,
@@ -13,7 +13,8 @@ export class User extends Migration {
                     isPrimariKey: true
                 },
                 user_id: {
-                    type: 'INT'
+                    type: 'INT',
+                    isNotNull: true
                 },
                 age: {
                     type: 'INT',
@@ -21,16 +22,23 @@ export class User extends Migration {
                 },
                 user_name: {
                     type: 'VARCHAR',
+                    charset: 'UTF8',
+                    collation: 'UTF8_GENERAL_CI',
                     constraint: 50,
                     isNotNull: true
                 },
                 first_name: {
                     type: 'TEXT',
-                    comments: 'primer nombre'
+                    comment: 'primer nombre',
                 },
                 last_name: {
                     type: 'TEXT',
-                    comments: 'segundo nombre'
+                    comment: 'segundo nombre'
+                },
+                full_name: {
+                    type: 'VARCHAR',
+                    constraint: 100,
+                    isNotNull: true
                 },
                 create_at: {
                     type: 'DATETIME',
@@ -39,7 +47,7 @@ export class User extends Migration {
             }
             this.addField(fields);
             this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
-            await this.createTable(this.table);
+            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, default_charset: 'UTF8', comment: 'Usuarios de prueba' });
         } catch (error: any) {
             console.log(error.message);
         }

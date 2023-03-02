@@ -1,10 +1,10 @@
-import { TDatabase, TReferenceOptions, TType } from "./sql"
+import { ICollation, TCharset, TCollation, TDatabase, TEngine, TReferenceOptions, TType } from "./sql"
 
-interface IFields {
-    [T: string]: TSqlAttribute
+type TColumns = {
+    [T: string]: TColumnsAttributes
 }
 
-type TSqlAttribute = {
+type TColumnsAttributes = {
     type: TType,
     constraint?: number,
     isAutoincrement?: boolean,
@@ -13,13 +13,19 @@ type TSqlAttribute = {
     isPrimariKey?: boolean,
     isIndex?: boolean,
     isUnique?: boolean,
-    comments?: string,
-    charset?: string;
+    comment?: string,
+    charset?: TCharset;
+    collation?: TCollation;
     foreignKey?: Omit<TForeignKey, 'column'>;
 }
 
-type TTableAttribute = {
-    attribute: keyof TSqlAttribute;
+type TGetTableColumnAttribute = {
+    attribute: keyof TColumnsAttributes;
+    value: TDatabase | object;
+}
+
+type TGetTableAttribute = {
+    attribute: keyof TTableAttribute;
     value: TDatabase | object;
 }
 
@@ -33,11 +39,28 @@ type TForeignKey = {
     onUpdate?: TReferenceOptions;
 }
 
-type TTforeign = {
+type TTforeignKeyStructure = {
     foreignKey: string;
     reference: string;
     onDelete: string;
     onUpdate: string;
 }
 
-export { TTableAttribute, TSqlAttribute, IFields, TTforeign, TForeignKey };
+
+type TTableAttribute = {
+    engine: TEngine;
+    collation?: TCollation;
+    comment?: string;
+    default_charset?: TCharset;
+    auto_icrement?: number;
+};
+
+export {
+    TGetTableColumnAttribute,
+    TColumnsAttributes,
+    TColumns,
+    TTforeignKeyStructure,
+    TForeignKey,
+    TTableAttribute,
+    TGetTableAttribute
+};
