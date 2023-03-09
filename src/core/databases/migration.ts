@@ -1,4 +1,3 @@
-import { Database } from "../../settings/database";
 import { Forge } from "./forge";
 
 export abstract class Migration extends Forge {

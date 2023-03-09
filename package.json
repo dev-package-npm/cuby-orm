@@ -2,10 +2,12 @@
   "name": "cuby-orm",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "build/index.js",
+  "types": "build/types/index.d.ts",
   "scripts": {
-    "watch": "npx tsc -w",
-    "migrate": "node ./build/index",
+    "watch": "rm -rf build && npx tsc -w",
+    "build": "rm -rf build && npx tsc",
+    "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -16,6 +18,7 @@
     "orm",
     "mysql",
     "cli",
+    "cuby-orm",
     "databases",
     "migration",
     "seeds",

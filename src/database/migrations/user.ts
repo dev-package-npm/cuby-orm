@@ -1,5 +1,5 @@
-import { TColumns } from "../../core/database/interfaces/forge.interface";
-import { Migration } from "../../core/database/migration";
+import { TColumns } from "../../core/databases/interfaces/forge.interface";
+import { Migration } from "../../core/databases/migration";
 
 export class User extends Migration {
     private table: string = 'users2';
@@ -10,26 +10,31 @@ export class User extends Migration {
                     type: 'INT',
                     isAutoincrement: true,
                     isNotNull: true,
-                    isPrimariKey: true
+                    isPrimariKey: true,
+                    comment: 'Esto es el identificador único'
                 },
                 user_id: {
                     type: 'INT',
-                    isNotNull: true
+                    isNotNull: true,
                 },
-                age: {
+                city_id: {
                     type: 'INT',
-                    isUnique: true,
+                    isIndex: true,
+                    isNotNull: true
                 },
                 user_name: {
                     type: 'VARCHAR',
-                    charset: 'UTF8',
-                    collation: 'UTF8_GENERAL_CI',
+                    charset: 'UTF8MB4',
+                    collation: 'UTF8MB4_UNICODE_CI',
                     constraint: 50,
-                    isNotNull: true
+                    default: 'NULL'
                 },
                 first_name: {
                     type: 'TEXT',
                     comment: 'primer nombre',
+                    charset: 'UTF8MB4',
+                    collation: 'UTF8MB4_GENERAL_CI',
+                    isNotNull: true,
                 },
                 last_name: {
                     type: 'TEXT',
@@ -43,11 +48,16 @@ export class User extends Migration {
                 create_at: {
                     type: 'DATETIME',
                     default: 'NOW()'
+                },
+                update_at: {
+                    type: 'DATETIME',
+                    default: 'NULL ON UPDATE NOW()',
                 }
             }
             this.addField(fields);
             this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
-            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, default_charset: 'UTF8', comment: 'Usuarios de prueba' });
+            // this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
+            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, default_charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba' });
         } catch (error: any) {
             console.log(error.message);
         }

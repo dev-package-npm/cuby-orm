@@ -17,4 +17,4 @@ const loadEnvFile = () => {
     dotenvExpand.expand(config);
 };
 
-export { loadEnvFile }
+export { loadEnvFile };

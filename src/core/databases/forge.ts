@@ -1,5 +1,6 @@
-import { Database, PoolConnection } from "../../settings/database";
+import { Database } from "./mysql/database.mysql";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
+import { TCompuestSentence } from "./interfaces/sql";
 
 export class Forge extends Database {
     protected db;
@@ -7,14 +8,10 @@ export class Forge extends Database {
     private tableFields: string[] = [];
     private sqlQuery: string = '';
 
-    private tableColumnsAttributes: TGetTableColumnAttribute[] = [
+    private readonly tableColumnsAttributes: TGetTableColumnAttribute[] = [
         {
             attribute: 'isPrimariKey',
             value: 'PRIMARY KEY'
-        },
-        {
-            attribute: 'isNotNull',
-            value: 'NOT NULL'
         },
         {
             attribute: 'isUnique',
@@ -27,14 +24,6 @@ export class Forge extends Database {
         {
             attribute: 'constraint',
             value: 'TABLE'
-        },
-        {
-            attribute: 'comment',
-            value: 'COMMENT'
-        },
-        {
-            attribute: 'default',
-            value: 'DEFAULT'
         },
         {
             attribute: 'foreignKey',
@@ -52,10 +41,22 @@ export class Forge extends Database {
         {
             attribute: 'collation',
             value: 'COLLATE'
-        }
+        },
+        {
+            attribute: 'isNotNull',
+            value: 'NOT NULL'
+        },
+        {
+            attribute: 'default',
+            value: 'DEFAULT'
+        },
+        {
+            attribute: 'comment',
+            value: 'COMMENT'
+        },
     ];
 
-    private tableAttributes: TGetTableAttribute[] = [
+    private readonly tableAttributes: TGetTableAttribute[] = [
         {
             attribute: 'auto_icrement',
             value: 'AUTO_INCREMENT'
@@ -79,12 +80,12 @@ export class Forge extends Database {
     ];
 
     private sqlStr: string = '';
-    private createTableStr: string = 'CREATE TABLE';
-    private dropTableStr: string = 'DROP TABLE';
-    private alterTableStr: string = 'ALTER TABLE';
-    private ifExistsStr: string = 'IF EXISTS';
-    private ifNotExistsStr: string = 'IF NOT EXISTS';
-    private addConstraintStr: string = 'ADD CONSTRAINT';
+    private readonly createTableStr: TCompuestSentence = 'CREATE TABLE';
+    private readonly dropTableStr: TCompuestSentence = 'DROP TABLE';
+    private readonly alterTableStr: TCompuestSentence = 'ALTER TABLE';
+    private readonly ifExistsStr: TCompuestSentence = 'IF EXISTS';
+    private readonly ifNotExistsStr: TCompuestSentence = 'IF NOT EXISTS';
+    private readonly addConstraintStr: TCompuestSentence = 'ADD CONSTRAINT';
 
     constructor() {
         super();
@@ -141,14 +142,17 @@ export class Forge extends Database {
 
     protected async addForeignKey(table: string, data: TForeignKey) {
         const tableAttributes = (<TTforeignKeyStructure>this.tableColumnsAttributes.find(item => item.attribute == 'foreignKey')?.value)
-        this.sqlStr = `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
+        if (this.sqlStr != '')
+            this.sqlStr += `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
+        else
+            this.sqlStr = `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
         if (data.onDelete != undefined) {
             this.sqlStr += ` ${tableAttributes.onDelete} ${data.onDelete}`;
         }
         if (data.onUpdate != undefined) {
             this.sqlStr += ` ${tableAttributes.onUpdate} ${data.onUpdate}`;
         }
-        this.sqlStr += ';';
+        this.sqlStr += ';\n';
     }
 
     protected async dropTable(name: string) {

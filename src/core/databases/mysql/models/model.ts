@@ -1,24 +1,41 @@
 //#region Imports
-import { Database } from "../databases/mysql.database";
+import { Database } from "../database.mysql";
 //#endregion
 
 //#region Interface
-export interface IQuerySelect {
-    select: Array<any>,
-    where: any
+
+interface IConstructorModel<T> {
+    table: string;
+    primaryKey: string;
+    fields: TArrayColumns<T>
+}
+
+export interface IQuerySelect<T> {
+    select?: ISelect<T>,
+    where: T
 }
 
 interface ISelectReturn {
     array?: boolean;
 }
+
+type ISelect<T> = TArrayColumns<T> | '*' | { subQuery: TSubQuery };
+
+type Column = '*' | string;
+type TSubQuery = string | Array<string> | {
+    select: string;
+    where: string
+}
+
+type TArrayColumns<T> = Array<Required<keyof T>>;
 //#endregion
 
 const database = new Database();
 
-export abstract class Model {
-    protected table: string;
-    protected primaryKey: string;
-    protected fields: Array<string>;
+export class Model<T> {
+    private _table: string = '';
+    private _primaryKey: string = '';
+    protected fields: TArrayColumns<T> = [];
     protected database: Database;
 
     private selectColumns: string[] = [];
@@ -27,11 +44,24 @@ export abstract class Model {
     private joinClauses: string[] = [];
     private orderByColumn: string | null = null;
     private orderByDirection: string | null = null;
-    constructor(table: string, primaryKey: string, fields: Array<string>) {
-        this.table = table;
-        this.primaryKey = primaryKey;
-        this.fields = fields;
+
+    constructor(params?: IConstructorModel<T>) {
+        if (params != undefined) {
+            const { fields, primaryKey, table } = params;
+            this._table = table;
+            this._primaryKey = primaryKey || 'id';
+            this.fields = fields;
+        }
         this.database = database;
+    }
+
+
+    set table(table: string) {
+        this._table = table;
+    }
+
+    set primaryKey(primaryKey: string) {
+        this._primaryKey = primaryKey;
     }
 
     public async executeQuery(sentence: string, values?: any): Promise<any> {
@@ -46,13 +76,13 @@ export abstract class Model {
         }
     }
 
-    public async create(data: object | Array<any>): Promise<any> {
+    public async create(data: T | Array<T>): Promise<any> {
         const sqlQuery: string = this.fillSqlQueryToInsert(data);
         return await this.executeQuery(sqlQuery);
     }
 
-    public async select<T>(value?: Partial<IQuerySelect>, condition?: ISelectReturn): Promise<T> {
-        const sqlQuery: string = this.fillSqlQueryToSelect(value?.select || [], value?.where);
+    public async find(value: IQuerySelect<T>, condition?: ISelectReturn): Promise<T> {
+        const sqlQuery: string = this.fillSqlQueryToSelect(value?.where, value?.select);
         const resultQuery = await this.executeQuery(sqlQuery);
         return condition?.array != undefined && condition.array == true ? <T>resultQuery : resultQuery.length > 1 ? <T>resultQuery : <T>resultQuery[0];
     }
@@ -68,16 +98,16 @@ export abstract class Model {
     }
 
     public async truncate(): Promise<any> {
-        const sqlQuery: string = `TRUNCATE TABLE ${this.table}`;
+        const sqlQuery: string = `TRUNCATE TABLE ${this._table}`;
         return await this.executeQuery(sqlQuery);
     }
 
-    select1(...columns: string[]): Model {
+    select1(...columns: string[]): Pick<Model<T>, 'where' | 'innerJoin'> {
         this.selectColumns = columns;
         return this;
     }
 
-    where(conditions: { [key: string]: any }, operator: 'AND' | 'OR' = 'AND'): Model {
+    where(conditions: { [key: string]: any }, operator: 'AND' | 'OR' = 'AND'): Pick<Model<T>, 'build' | 'orderBy'> {
         let whereClause = '';
         for (const key in conditions) {
             if (conditions.hasOwnProperty(key)) {
@@ -90,24 +120,24 @@ export abstract class Model {
         return this;
     }
 
-    subQuery(subQuery: string): Model {
+    subQuery(subQuery: string): Model<T> {
         this.subQueries.push(subQuery);
         return this;
     }
 
-    innerJoin(joinTable: string, joinCondition: string): Model {
+    innerJoin(joinTable: string, joinCondition: string): Pick<Model<T>, 'innerJoin' | 'where'> {
         this.joinClauses.push(`INNER JOIN ${joinTable} ON ${joinCondition}`);
         return this;
     }
 
-    orderBy(column: string, direction: 'ASC' | 'DESC' = 'ASC'): Model {
+    orderBy(column: string, direction: 'ASC' | 'DESC' = 'ASC'): Model<T> {
         this.orderByColumn = column;
         this.orderByDirection = direction;
         return this;
     }
 
-    build(): string {
-        let query = `SELECT ${this.selectColumns.join(', ')} FROM ${this.table}`;
+    build(): T {
+        let query = `SELECT ${this.selectColumns.join(', ')} FROM ${this._table}`;
         if (this.subQueries.length > 0) {
             query += ` WHERE ${this.subQueries.join(' AND ')}`;
         }
@@ -120,20 +150,21 @@ export abstract class Model {
         if (this.orderByColumn) {
             query += ` ORDER BY ${this.orderByColumn} ${this.orderByDirection}`;
         }
-        return query;
+        return <T>query;
     }
-    protected fillSqlQueryToSelect(data: Array<any>, where: any): string {
+
+    protected fillSqlQueryToSelect(where: any, data?: Array<any> | string,): string {
         let sqlQuery: string = 'SELECT ';
-        if (data !== undefined && data.length !== 0) {
+        if (data !== undefined && data.length !== 0 && data instanceof Array) {
             for (const key in data) {
-                sqlQuery += `${this.table}.${data[key]},`
+                sqlQuery += `${this._table}.${data[key]},`
             }
             sqlQuery = sqlQuery.slice(0, sqlQuery.length - 1);
         }
         else {
             sqlQuery += ' *';
         }
-        sqlQuery += ` FROM ${this.table}`;
+        sqlQuery += ` FROM ${this._table}`;
 
         sqlQuery += this.fillSqlQueryToWhere(where);
         return sqlQuery;
@@ -144,7 +175,7 @@ export abstract class Model {
         if (Array.isArray(data)) {
             if (data.length > 0) {
                 if (Object.entries(data[0]).length !== 0) {
-                    let sqlQuery: string = `${this.table}(`;
+                    let sqlQuery: string = `${this._table}(`;
                     for (const key in data[0]) {
                         sqlQuery += `\`${key}\`,`;
                     }
@@ -172,7 +203,7 @@ export abstract class Model {
         }
         else {
             if (Object.entries(data).length !== 0) {
-                let sqlQuery: string = `${this.table}(`;
+                let sqlQuery: string = `${this._table}(`;
                 for (const key in data) {
                     sqlQuery += `\`${key}\`,`;
                 }
@@ -195,11 +226,11 @@ export abstract class Model {
         let sqlQuery: string = '';
         if (Object.entries(value).length !== 0 && Object.entries(valueWhere).length !== 0) {
             for (const key in value) {
-                sqlQuery += `${this.table}.${key}='${value[key]}',`;
+                sqlQuery += `${this._table}.${key}='${value[key]}',`;
             }
-            sqlQuery = `UPDATE ${this.table} SET ${sqlQuery.slice(0, sqlQuery.length - 1)} WHERE `;
+            sqlQuery = `UPDATE ${this._table} SET ${sqlQuery.slice(0, sqlQuery.length - 1)} WHERE `;
             for (const key in valueWhere) {
-                sqlQuery += `${this.table}.${key}='${valueWhere[key]}' AND `;
+                sqlQuery += `${this._table}.${key}='${valueWhere[key]}' AND `;
             }
             sqlQuery = sqlQuery.slice(0, sqlQuery.length - 5);
             return sqlQuery;
@@ -209,7 +240,7 @@ export abstract class Model {
 
 
     protected fillSqlQueryToDelete(where: any): string {
-        let sqlQuery: string = `DELETE FROM ${this.table}`;
+        let sqlQuery: string = `DELETE FROM ${this._table}`;
         sqlQuery += this.fillSqlQueryToWhere(where);
         return sqlQuery;
     }
@@ -220,13 +251,21 @@ export abstract class Model {
         if (valueWhere !== undefined) {
             if (Object.entries(valueWhere).length !== 0) {
                 for (const key in valueWhere) {
-                    sqlQuery += `${this.table}.${key}='${valueWhere[key]}' AND `;
+                    sqlQuery += `${this._table}.${key}='${valueWhere[key]}' AND `;
                 }
                 sqlQuery = sqlQuery.slice(0, sqlQuery.length - 5);
                 return sqlQuery;
             }
         }
         return '';
+    }
+
+    protected getProperty<T>(): Array<string> {
+        const valores: string[] = [];
+        for (const propiedad in {} as T) {
+            valores.push(propiedad);
+        }
+        return valores;
     }
     //#endregion
 }
