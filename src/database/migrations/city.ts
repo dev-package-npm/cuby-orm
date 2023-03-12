@@ -1,11 +1,15 @@
-import { TColumns } from "../../core/databases/interfaces/forge.interface";
-import { Migration } from "../../core/databases/migration";
+import { TColumns } from "../../core/mysql/interfaces/forge.interface";
+import { Migration } from "../../core/mysql/migration.mysql";
 
-export class City extends Migration {
+interface ICity {
+    id: number;
+    name: string;
+}
+export class City extends Migration<ICity> {
     private table: string = 'city';
     async up(): Promise<void> {
         try {
-            let fields: TColumns = {
+            let fields: TColumns<ICity> = {
                 id: {
                     type: 'INT',
                     isAutoincrement: true,

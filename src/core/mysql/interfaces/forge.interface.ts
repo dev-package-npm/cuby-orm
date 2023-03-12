@@ -1,10 +1,10 @@
 import { ICollation, TCharset, TCollation, TDatabase, TEngine, TReferenceOptions, TType } from "./sql"
 
-type TColumns = {
-    [T: string]: TColumnsAttributes
+type TColumns<T> = {
+    [B in keyof Required<T>]: TColumnsAttributes<T>
 }
 
-type TColumnsAttributes = {
+type TColumnsAttributes<T> = {
     type: TType,
     constraint?: number,
     isAutoincrement?: boolean,
@@ -16,11 +16,11 @@ type TColumnsAttributes = {
     comment?: string,
     charset?: TCharset;
     collation?: TCollation;
-    foreignKey?: Omit<TForeignKey, 'column'>;
+    foreignKey?: Omit<TForeignKey<T>, 'column'>;
 }
 
-type TGetTableColumnAttribute = {
-    attribute: keyof TColumnsAttributes;
+type TGetTableColumnAttribute<T> = {
+    attribute: keyof TColumnsAttributes<T>;
     value: TDatabase | object;
 }
 
@@ -29,8 +29,8 @@ type TGetTableAttribute = {
     value: TDatabase | object;
 }
 
-type TForeignKey = {
-    column: string;
+type TForeignKey<T> = {
+    column: keyof T extends infer K ? K extends string ? K : never : never;
     references: {
         table: string;
         column: string;

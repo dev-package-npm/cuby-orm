@@ -4,6 +4,9 @@
   "description": "",
   "main": "build/index.js",
   "types": "build/types/index.d.ts",
+  "bin": {
+    "cuby": "./build/index.js"
+  },
   "scripts": {
     "watch": "rm -rf build && npx tsc -w",
     "build": "rm -rf build && npx tsc",
@@ -31,8 +34,16 @@
   },
   "homepage": "https://github.com/dev-package-npm/cuby-orm#readme",
   "dependencies": {
+    "ansi-colors": "^4.1.3",
     "dotenv": "^16.0.3",
     "dotenv-expand": "^10.0.0",
-    "promise-mysql": "^5.2.0"
+    "inquirer": "^8.2.4",
+    "promise-mysql": "^5.2.0",
+    "spinnies": "^0.5.1",
+    "ts-code-generator": "^0.0.3"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.3",
+    "typescript": "^4.9.5"
   }
 }

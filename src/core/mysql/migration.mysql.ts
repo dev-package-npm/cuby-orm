@@ -1,6 +1,6 @@
-import { Forge } from "./forge";
+import { Forge } from "./forge.mysql";
 
-export abstract class Migration extends Forge {
+export abstract class Migration<T> extends Forge<T> {
     constructor() {
         super();
     }

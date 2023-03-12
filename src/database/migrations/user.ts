@@ -1,11 +1,23 @@
-import { TColumns } from "../../core/databases/interfaces/forge.interface";
-import { Migration } from "../../core/databases/migration";
+import { TColumns } from "../../core/mysql/interfaces/forge.interface";
+import { Migration } from "../../core/mysql/migration.mysql";
 
-export class User extends Migration {
+interface IUser {
+    id: number,
+    user_id: number,
+    city_id: number,
+    user_name: string,
+    first_name: string,
+    last_name: string,
+    full_name: string,
+    create_at: string,
+    update_at?: string
+}
+
+export class User extends Migration<IUser> {
     private table: string = 'users2';
     async up(): Promise<void> {
         try {
-            let fields: TColumns = {
+            let fields: TColumns<IUser> = {
                 id: {
                     type: 'INT',
                     isAutoincrement: true,

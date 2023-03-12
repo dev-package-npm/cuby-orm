@@ -1,14 +1,14 @@
-import { Database } from "./mysql/database.mysql";
+import { Database } from "./database.mysql";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
 import { TCompuestSentence } from "./interfaces/sql";
 
-export class Forge extends Database {
+export class Forge<T> extends Database {
     protected db;
     private fields: string[] = [];
     private tableFields: string[] = [];
     private sqlQuery: string = '';
 
-    private readonly tableColumnsAttributes: TGetTableColumnAttribute[] = [
+    private readonly tableColumnsAttributes: TGetTableColumnAttribute<T>[] = [
         {
             attribute: 'isPrimariKey',
             value: 'PRIMARY KEY'
@@ -92,10 +92,10 @@ export class Forge extends Database {
         this.db = async () => await this.getConnection();
     }
 
-    protected addField(fields: TColumns) {
+    protected addField(fields: TColumns<T>) {
         // console.log(Object.keys(fields));
         for (const item of Object.keys(fields)) {
-            this.fields.push(this.orderFields(item, fields));
+            this.fields.push(this.orderFields(<any>item, fields));
         }
         if (this.sqlStr != '') {
             this.fields.push(this.sqlStr);
@@ -140,7 +140,7 @@ export class Forge extends Database {
         return await this.executeQuery(this.sqlQuery);
     }
 
-    protected async addForeignKey(table: string, data: TForeignKey) {
+    protected async addForeignKey(table: string, data: TForeignKey<T>) {
         const tableAttributes = (<TTforeignKeyStructure>this.tableColumnsAttributes.find(item => item.attribute == 'foreignKey')?.value)
         if (this.sqlStr != '')
             this.sqlStr += `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
@@ -174,7 +174,7 @@ export class Forge extends Database {
         return await this.executeQuery('SET FOREIGN_KEY_CHECKS=0');
     }
 
-    private orderFields(item: string, fields: TColumns) {
+    public orderFields(item: keyof TColumns<T> extends infer K ? K extends string ? K : never : never, fields: TColumns<T>) {
         let value = `\`${item}\` ${fields[item].type}${this.validateAttributeColumns('constraint', fields[item]) ? `(${fields[item].constraint})` : ''}`;
         for (const item2 of this.tableColumnsAttributes) {
             if (this.validateAttributeColumns(item2.attribute, fields[item]) && item2.attribute != 'constraint') {
@@ -242,7 +242,7 @@ export class Forge extends Database {
         return results;
     }
 
-    private validateAttributeColumns(attribute: keyof TColumnsAttributes, fields: TColumnsAttributes) {
+    private validateAttributeColumns(attribute: keyof TColumnsAttributes<T>, fields: TColumnsAttributes<T>) {
         return fields?.[attribute] != undefined && (fields?.[attribute] == true || typeof fields?.[attribute] == 'number' || typeof fields?.[attribute] == 'string' || typeof fields?.[attribute] == 'object') ? true : false;
     }
 
