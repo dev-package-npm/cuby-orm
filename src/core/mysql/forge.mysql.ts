@@ -1,9 +1,9 @@
-import { Database } from "./database.mysql";
+import { Database, PoolConnection } from "./database.mysql";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
 import { TCompuestSentence } from "./interfaces/sql";
 
 export class Forge<T> extends Database {
-    protected db;
+    protected db!: PoolConnection;
     private fields: string[] = [];
     private tableFields: string[] = [];
     private sqlQuery: string = '';
@@ -89,7 +89,12 @@ export class Forge<T> extends Database {
 
     constructor() {
         super();
-        this.db = async () => await this.getConnection();
+        // this.db = async () => { return await this.getConnection() };
+        this.loadDatabase();
+    }
+
+    private async loadDatabase() {
+        this.db = await this.getConnection();
     }
 
     protected addField(fields: TColumns<T>) {
@@ -236,9 +241,10 @@ export class Forge<T> extends Database {
     }
 
     private async executeQuery(sentence: string, values?: any): Promise<any> {
-        const results = await (await this.db()).query(sentence, values);
-        await (await this.db()).release();
-        (await this.db()).destroy();
+        // let db = await this.getConnection();
+        const results = await this.db.query(sentence, values);
+        await this.db.release();
+        this.db.destroy();
         return results;
     }
 

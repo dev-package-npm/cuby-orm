@@ -89,7 +89,7 @@ export class Model<T> {
         }
     }
 
-    public async findAll(value?: IQuerySelect<T>, condition?: ISelectReturn): Promise<T> {
+    public async findAll(value?: Partial<IQuerySelect<T>>, condition?: ISelectReturn): Promise<T> {
         const sqlQuery: string = this.fillSqlQueryToSelect(value?.where, value?.select);
         const resultQuery = await this.executeQuery(sqlQuery);
         return condition?.array != undefined && condition.array == true ? resultQuery : resultQuery.length > 1 ? resultQuery : resultQuery[0];
@@ -97,7 +97,7 @@ export class Model<T> {
 
     public select(columns: (keyof Partial<T>)[]): Pick<BaseModel<T>, 'where' | 'innerJoin'>;
     public async select(value?: Partial<IQuerySelect<T>>, condition?: ISelectReturn): Promise<T | T[]>;
-    public select(args: any, condition?: ISelectReturn): (Promise<T | T[]>) | Pick<BaseModel<T>, 'where' | 'innerJoin'> {
+    public select(args: any, condition?: ISelectReturn): Promise<T | T[]> | Pick<BaseModel<T>, 'where' | 'innerJoin'> {
         if (Array.isArray(args)) {
             this._baseModel.selectColumns = args;
             return this._baseModel;

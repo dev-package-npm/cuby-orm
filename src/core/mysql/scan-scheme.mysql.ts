@@ -17,7 +17,7 @@ interface ISchemeColums {
     CHARACTER_SET_NAME: null,
     COLLATION_NAME: null,
     COLUMN_TYPE: string,
-    COLUMN_KEY: string,
+    COLUMN_KEY: 'PRI' | 'MUL',
     EXTRA: string,
     PRIVILEGES: string,
     COLUMN_COMMENT: string,
@@ -27,16 +27,19 @@ interface ISchemeColums {
 
 export default class scanSchemeMysql extends Model<any> {
     private sqlQuery: string = '';
+    private _database: string = '';
     constructor() {
         super({ table: '', primaryKey: '', fields: [] });
     }
 
-    public async getTables(): Promise<any> {
+    public async getDatabaseTable(database?: string): Promise<{ table: string }[]> {
         try {
+            if (database != undefined)
+                this._database = database;
             this.sqlQuery = `
         SELECT table_name AS \`table\`
         FROM information_schema.tables
-        WHERE TABLE_SCHEMA = '${process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`]}'
+        WHERE TABLE_SCHEMA = '${database || process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`]}'
         `;
             return await this.executeQuery(this.sqlQuery);
         } catch (error: any) {
@@ -44,12 +47,13 @@ export default class scanSchemeMysql extends Model<any> {
         }
     }
 
-    public async getColumnScheme(scheme: (keyof ISchemeColums)[], table: string): Promise<ISchemeColums[]> {
+    public async getColumnScheme(scheme: (keyof ISchemeColums)[], table: string, database?: string): Promise<ISchemeColums[]> {
         this.sqlQuery = `
         SELECT
         ${scheme}
         FROM information_schema.columns 
-        WHERE table_name = '${table}';
+        WHERE TABLE_NAME = '${table}'
+        AND TABLE_SCHEMA = '${database || this._database}'
         `;
         return await this.executeQuery(this.sqlQuery);
     }

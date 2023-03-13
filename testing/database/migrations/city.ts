@@ -1,5 +1,5 @@
-import { TColumns } from "../../core/mysql/interfaces/forge.interface";
-import { Migration } from "../../core/mysql/migration.mysql";
+import { TColumns } from "../../../../src/core/mysql/interfaces/forge.interface";
+import { Migration } from "../../../../src/core/mysql/migration.mysql";
 
 interface ICity {
     id: number;

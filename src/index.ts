@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import Cuby from "./bin/cuby";
 import { Model } from "./core/mysql/models/model";
 import ScanSchemeMysql from "./core/mysql/scan-scheme.mysql";
@@ -20,7 +21,7 @@ interface IUserModel {
 const main = async (): Promise<void> => {
     try {
         const scheme = new ScanSchemeMysql();
-        const tables: any[] = await scheme.getTables();
+        const tables: any[] = await scheme.getDatabaseTable('');
         // for (const item of tables) {
         //     console.log(item.table);
         // }

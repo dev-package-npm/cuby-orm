@@ -1,7 +1,8 @@
-import { TColumns } from "../../core/mysql/interfaces/forge.interface";
-import { Migration } from "../../core/mysql/migration.mysql";
+import { TColumns } from "../../../src/core/mysql/interfaces/forge.interface";
+import { Migration } from "../../../src/core/mysql/migration.mysql";
+import { Users1Model } from '../../models/users1.model';
 
-interface IUser {
+/* interface IUser {
     id: number,
     user_id: number,
     city_id: number,
@@ -82,4 +83,10 @@ export class User extends Migration<IUser> {
             console.log(error.message);
         }
     }
+}
+ */
+const users = new Users1Model();
+const main = async () => {
+    const user = await users.select({ select: ['age', 'first_name'], where: { id: 1 } });
+    // user[0].
 }
