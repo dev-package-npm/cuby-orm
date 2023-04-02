@@ -3,6 +3,8 @@ import ansiColors from 'ansi-colors';
 import fs from 'fs';
 import path from 'path';
 import MakeModel from '../make/make-model';
+import { version } from '../../package.json';
+import { model } from '../../.cuby.json';
 
 export default class Cuby extends MakeModel {
     //#region Private properties
@@ -22,6 +24,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:scan:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:migration ')}Create a model with the specified name.
+
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
     
@@ -29,17 +32,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('--name ')}Name files ${ansiColors.redBright('Not applied')}.
         ${ansiColors.cyan('--add ')}Name module.`;
 
-    private helpInitial: string = `
-    Example command
-        ${ansiColors.cyan(this.abrevCommand + ' <flags> <name> ')}
-    
-    COMMAND LINE FLAGS
-        ${ansiColors.cyan('create, c ')}Create project name with given name.
-        ${ansiColors.cyan('--help, -h ')}Print this message.
-        ${ansiColors.cyan('--version, -v ')}Print version with package.
-`;
-
-    protected version: string = '';
+    protected version: string = version;
     protected pathIndex: string = path.join(path.resolve(), 'testing');
 
     //#endregion
@@ -92,7 +85,7 @@ ${ansiColors.yellowBright('Database')}
     private printHelp(): void {
         if (fs.existsSync(this.pathPackage))
             console.log(this.help);
-        else console.log(this.helpInitial);
+        else throw new Error(ansiColors.yellowBright('No initialized node project exists'));
     }
 
     private validateQuantityArguments(params: string[], quantity: number): boolean {
@@ -147,11 +140,13 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
-    //#region 
+    // TODO Proporcionar ruta para el modelo a crear opcionalmente 
     private async model(params: Array<string>) {
         try {
             if (params.length != 0)
                 for (const item of params) {
+                    if (this.regExpEspecialCharacter.test(item))
+                        throw new Error(ansiColors.redBright("Unsupported characters: " + item));
                     await this.executeAction(item, 'model');
                 }
             else
@@ -160,6 +155,8 @@ ${ansiColors.yellowBright('Database')}
                     name: 'model',
                     message: 'Write the name of the model: ',
                 }).then(async (answer) => {
+                    if (this.regExpEspecialCharacter.test(answer.model))
+                        throw new Error(ansiColors.redBright("Unsupported characters: " + answer.model));
                     await this.executeAction(answer.model, 'model');
                 });
         } catch (error: any) {
@@ -167,19 +164,22 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
+    // TODO Tener encuenta posibilidad de esacanera varias tablas, pero poner ruta de destino de modelos obligatoriamente 
     private async scanModel(params: Array<string>) {
         try {
             if (params.length != 0)
                 for (const item of params) {
+                    if (this.regExpEspecialCharacter.test(item))
+                        throw new Error(ansiColors.redBright("Unsupported characters: " + item));
                     await this.executeAction(item, 'scan:model');
                 }
             else
                 await inquirer.prompt({
                     type: 'input',
-                    name: 'table',
-                    message: 'Write the name of the table to scan: ',
+                    name: 'database',
+                    message: 'Write the name of the database to scan: ',
                 }).then(async (answer) => {
-                    await this.executeAction(answer.table, 'scan:model');
+                    await this.executeAction(answer.database, 'scan:model');
                 });
         } catch (error: any) {
             throw new Error(error.message);
@@ -220,6 +220,6 @@ ${ansiColors.yellowBright('Database')}
             throw new Error(error.message);
         }
     }
-    //#endregion
+
     //#endregion
 }

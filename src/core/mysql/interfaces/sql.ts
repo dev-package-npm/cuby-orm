@@ -14,11 +14,52 @@ type TDatabaseAttribute = 'PRIMARY KEY' | 'NOT NULL' | 'UNIQUE' | 'AUTO_INCREMEN
 type TReferenceOptions = 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'SET DEFAULT';
 
 type TCharset = 'BIG5' | 'DEC8' | 'CP850' | 'HP8' | 'KOI8R' | 'LATIN1' | 'LATIN2' | 'SWE7' | 'ASCII' | 'UJIS' | 'SJIS' | 'HEBREW' | 'TIS620' | 'EUCKR' | 'KOI8U' | 'GB2312' | 'GREEK' | 'CP1250' | 'GBK' | 'LATIN5' | 'ARMSCII8' | 'UTF8' | 'UCS2' | 'CP866' | 'KEYBCS2' | 'MACCE' | 'MACROMAN' | 'CP852' | 'LATIN7' | 'UTF8MB4' | 'CP1251' | 'UTF16' | 'UTF16LE' | 'CP1256' | 'CP1257' | 'UTF32' | 'BINARY' | 'GEOSTD8' | 'CP932' | 'EUCJPMS';
+
 type TEngine = 'InnoDB' | 'Aria' | 'CSV' | 'MEMORY' | 'MyISAM' | 'NDB' | 'BLACKHOLE' | 'ARCHIVE' | 'SEQUENCE' | 'MRG_MyISAM' | 'PERFORMANCE_SCHEMA';
 
 //#region Collation
-type TCollation = TCollationUtf8 | TCollationBig5 | TCollationDec8 | TCollationCp850 | TCollationHp8 | TCollationKoi8r | TCollationLatin1 |
-    TCollationLatin2 | TCollationSwe7 | TCollationAscii | TCollationUjis | TCollationSjis | TCollationHebrew | TCollationTis620 | TCollationEuckr | TCollationKoi8u | TCollationGb2312 | TCollationGreek | TCollationCp1250 | TCollationGbk | TCollationLatin5 | TCollationArmscii8 | TCollationUcs2 | TCollationCp866 | TCollationKeybcs2 | TCollationMacce | TCollationMacroman | TCollationCp852 | TCollationLatin7 | TCollationUtf8mb4 | TCollationCp1251 | TCollationUtf16 | TCollationCp1256 | TCollationCp1257 | TCollationUtf32 | TCollationBinary | TCollationGeostd8 | TCollationCp932 | TCollationEucjpms;
+type TCollation<T extends TCharset> =
+    T extends 'UTF8' ? TCollationUtf8 :
+    T extends 'UTF8MB4' ? TCollationUtf8mb4 :
+    T extends 'BIG5' ? TCollationBig5 :
+    T extends 'DEC8' ? TCollationDec8 :
+    T extends 'CP850' ? TCollationCp850 :
+    T extends 'HP8' ? TCollationHp8 :
+    T extends 'KOI8R' ? TCollationKoi8r :
+    T extends 'LATIN1' ? TCollationLatin1 :
+    T extends 'LATIN2' ? TCollationLatin2 :
+    T extends 'SWE7' ? TCollationSwe7 :
+    T extends 'ASCII' ? TCollationAscii :
+    T extends 'UJIS' ? TCollationUjis :
+    T extends 'SJIS' ? TCollationSjis :
+    T extends 'HEBREW' ? TCollationHebrew :
+    T extends 'TIS620' ? TCollationTis620 :
+    T extends 'EUCKR' ? TCollationEuckr :
+    T extends 'KOI8U' ? TCollationKoi8u :
+    T extends 'GB2312' ? TCollationGb2312 :
+    T extends 'GREEK' ? TCollationGreek :
+    T extends 'CP1250' ? TCollationCp1250 :
+    T extends 'GBK' ? TCollationGbk :
+    T extends 'LATIN5' ? TCollationLatin5 :
+    T extends 'ARMSCII8' ? TCollationArmscii8 :
+    T extends 'UCS2' ? TCollationUcs2 :
+    T extends 'CP866' ? TCollationCp866 :
+    T extends 'KEYBCS2' ? TCollationKeybcs2 :
+    T extends 'MACCE' ? TCollationMacce :
+    T extends 'MACROMAN' ? TCollationMacroman :
+    T extends 'CP852' ? TCollationCp852 :
+    T extends 'LATIN7' ? TCollationLatin7 :
+    T extends 'CP1251' ? TCollationCp1251 :
+    T extends 'UTF16' ? TCollationUtf16 :
+    T extends 'CP1256' ? TCollationCp1256 :
+    T extends 'CP1257' ? TCollationCp1257 :
+    T extends 'UTF32' ? TCollationUtf32 :
+    T extends 'BINARY' ? TCollationBinary :
+    T extends 'GEOSTD8' ? TCollationGeostd8 :
+    T extends 'CP932' ? TCollationCp932 :
+    T extends 'EUCJPMS' ? TCollationEucjpms :
+    never;
+
 type ICollation<T extends TCharset> = TCollationUtf8;
 
 type TCollationUtf8 = 'UTF8_GENERAL_CI' | 'UTF8_BIN' | 'UTF8_UNICODE_CI' | 'UTF8_ICELANDIC_CI' | 'UTF8_LATVIAN_CI' | 'UTF8_ROMANIAN_CI' | 'UTF8_SLOVENIAN_CI' | 'UTF8_POLISH_CI' | 'UTF8_ESTONIAN_CI' | 'UTF8_SPANISH_CI' | 'UTF8_SWEDISH_CI' | 'UTF8_TURKISH_CI' | 'UTF8_CZECH_CI' | 'UTF8_DANISH_CI' | 'UTF8_LITHUANIAN_CI' | 'UTF8_SLOVAK_CI' | 'UTF8_SPANISH2_CI' | 'UTF8_ROMAN_CI' | 'UTF8_PERSIAN_CI' | 'UTF8_ESPERANTO_CI' | 'UTF8_HUNGARIAN_CI' | 'UTF8_SINHALA_CI' | 'UTF8_GERMAN2_CI' | 'UTF8_CROATIAN_MYSQL561_CI' | 'UTF8_UNICODE_520_CI' | 'UTF8_VIETNAMESE_CI' | 'UTF8_GENERAL_MYSQL500_CI' | 'UTF8_CROATIAN_CI' | 'UTF8_MYANMAR_CI' | 'UTF8_THAI_520_W2' | 'UTF8_GENERAL_NOPAD_CI' | 'UTF8_NOPAD_BIN' | 'UTF8_UNICODE_NOPAD_CI' | 'UTF8_UNICODE_520_NOPAD_CI';

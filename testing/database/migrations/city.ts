@@ -1,5 +1,5 @@
-import { TColumns } from "../../../../src/core/mysql/interfaces/forge.interface";
-import { Migration } from "../../../../src/core/mysql/migration.mysql";
+import { TColumns } from "../../../src/core/mysql/interfaces/forge.interface";
+import { Migration } from "../../../src/core/mysql/migration.mysql";
 
 interface ICity {
     id: number;
@@ -23,7 +23,7 @@ export class City extends Migration<ICity> {
                 }
             }
             this.addField(fields);
-            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, default_charset: 'UTF8', collation: 'UTF8_GENERAL_CI' });
+            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI' });
         } catch (error: any) {
             console.log(error.message);
         }

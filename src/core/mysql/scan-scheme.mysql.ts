@@ -41,7 +41,7 @@ export default class scanSchemeMysql extends Model<any> {
         FROM information_schema.tables
         WHERE TABLE_SCHEMA = '${database || process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`]}'
         `;
-            return await this.executeQuery(this.sqlQuery);
+            return await this.query(this.sqlQuery);
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -55,6 +55,6 @@ export default class scanSchemeMysql extends Model<any> {
         WHERE TABLE_NAME = '${table}'
         AND TABLE_SCHEMA = '${database || this._database}'
         `;
-        return await this.executeQuery(this.sqlQuery);
+        return await this.query(this.sqlQuery);
     }
 }

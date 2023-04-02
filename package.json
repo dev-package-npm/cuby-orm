@@ -2,10 +2,10 @@
   "name": "cuby-orm",
   "version": "0.0.0",
   "description": "",
-  "main": "build/index.js",
+  "main": "build/src/index.js",
   "types": "build/types/index.d.ts",
   "bin": {
-    "cuby": "./build/index.js"
+    "cuby": "./build/src/index.js"
   },
   "scripts": {
     "watch": "rm -rf build && npx tsc -w",
@@ -40,6 +40,7 @@
     "dotenv-expand": "^10.0.0",
     "inquirer": "^8.2.4",
     "promise-mysql": "^5.2.0",
+    "rxjs": "^7.8.0",
     "spinnies": "^0.5.1",
     "ts-code-generator": "^0.0.3"
   },

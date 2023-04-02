@@ -62,7 +62,7 @@ export class Forge<T> extends Database {
             value: 'AUTO_INCREMENT'
         },
         {
-            attribute: 'default_charset',
+            attribute: 'charset',
             value: 'DEFAULT CHARSET'
         },
         {
@@ -231,8 +231,8 @@ export class Forge<T> extends Database {
                     case 'comment':
                         value += ` ${item2.value}='${tableAttribute.comment}'`;
                         break;
-                    case 'default_charset':
-                        value += ` ${item2.value}=${tableAttribute.default_charset}`;
+                    case 'charset':
+                        value += ` ${item2.value}=${tableAttribute.charset}`;
                         break;
                 }
             }

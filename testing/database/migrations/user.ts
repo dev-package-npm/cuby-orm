@@ -1,8 +1,8 @@
 import { TColumns } from "../../../src/core/mysql/interfaces/forge.interface";
 import { Migration } from "../../../src/core/mysql/migration.mysql";
-import { Users1Model } from '../../models/users1.model';
+// import { Users1Model } from '../../models/users1.model';
 
-/* interface IUser {
+interface IUser {
     id: number,
     user_id: number,
     city_id: number,
@@ -38,7 +38,7 @@ export class User extends Migration<IUser> {
                 user_name: {
                     type: 'VARCHAR',
                     charset: 'UTF8MB4',
-                    collation: 'UTF8MB4_UNICODE_CI',
+                    collation: 'UTF8MB4_BIN',
                     constraint: 50,
                     default: 'NULL'
                 },
@@ -46,7 +46,7 @@ export class User extends Migration<IUser> {
                     type: 'TEXT',
                     comment: 'primer nombre',
                     charset: 'UTF8MB4',
-                    collation: 'UTF8MB4_GENERAL_CI',
+                    collation: 'UTF8MB4_BIN',
                     isNotNull: true,
                 },
                 last_name: {
@@ -70,7 +70,7 @@ export class User extends Migration<IUser> {
             this.addField(fields);
             this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
             // this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
-            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, default_charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba' });
+            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba' });
         } catch (error: any) {
             console.log(error.message);
         }
@@ -84,9 +84,9 @@ export class User extends Migration<IUser> {
         }
     }
 }
- */
-const users = new Users1Model();
+
+/* const users = new Users1Model();
 const main = async () => {
     const user = await users.select({ select: ['age', 'first_name'], where: { id: 1 } });
     // user[0].
-}
+} */
