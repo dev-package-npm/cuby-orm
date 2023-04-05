@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import readLine from 'node:readline';
 import { createFile, InterfacePropertyStructure } from "ts-code-generator";
 import { Common } from "./common";
 import ansiColors from "ansi-colors";
@@ -8,15 +10,20 @@ import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
 export default class MakeModel extends Common {
     protected fileNameModel: string;
     protected pathModel: string;
+    protected folderDatabaseModel: string[] = [];
+    protected originalPathModel: string = '';
     protected scanScheme = new scanSchemeMysql();
     private interface: InterfacePropertyStructure[] = [];
     private fields: string = '';
     private primariKey: string = '';
+    private folderModel: string = '';
+    private isScan: boolean = false;
 
     constructor(params: { fileNameModel: string, pathModel: string }) {
         super();
         this.fileNameModel = params.fileNameModel;
         this.pathModel = params.pathModel;
+        this.originalPathModel = this.pathModel;
     }
 
     protected createModel(nameClass: string, inputModel: string) {
@@ -52,8 +59,19 @@ export default class MakeModel extends Common {
                 },
             ]
         });
+
+        if (this.folderDatabaseModel.length !== 0) {
+            this.pathModel = this.originalPathModel;
+            if (this.folderModel !== process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`])
+                this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
+        }
+
         if (fs.existsSync(this.pathModel)) {
-            fs.writeFileSync(`${this.pathModel}${file.fileName}`, file.write());
+            if (this.isScan && fs.existsSync(path.join(this.pathModel, file.fileName))) {
+                let content = new Readable({ encoding: 'utf-8', read() { this.push(file.write()), this.push(null) } });
+                this.updateModelFile(path.join(this.pathModel, file.fileName), content);
+            } else
+                fs.writeFileSync(`${this.pathModel}${file.fileName}`, file.write());
         }
         else {
             let folder: any = this.pathModel.split(path.sep);
@@ -63,16 +81,19 @@ export default class MakeModel extends Common {
     }
 
     protected async generateScanModel(database: string) {
+        this.folderModel = database;
+        this.isScan = true;
         const tables = await this.scanScheme.getDatabaseTable(database);
         for (const item of tables) {
             const columns = await this.scanScheme.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
             this.fields += '[';
-            // console.log(item, columns);
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
                     type: this.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
-                    isOptional: item2.IS_NULLABLE == 'YES' ? true : false,
+                    isOptional: item2.IS_NULLABLE == 'YES' ? true :
+                        item2.COLUMN_KEY == 'PRI' ? true :
+                            item2.COLUMN_DEFAULT != null ? true : false,
                 });
                 this.fields += `'${item2.COLUMN_NAME}', `;
                 if (item2.COLUMN_KEY == 'PRI') {
@@ -85,9 +106,23 @@ export default class MakeModel extends Common {
             this.fields = this.fields.slice(0, this.fields.length - 2);
             this.fields += ']';
             this.createModel(nameClassModel, item.table.toLocaleLowerCase());
-            // console.log(this.interface);
             this.fields = '';
             this.interface = [];
+        }
+    }
+
+    protected async getDatabase() {
+        return this.scanScheme.getDatabase();
+    }
+
+    protected createFolderModelScaned() {
+        if (this.folderDatabaseModel.length !== 0) {
+            this.folderDatabaseModel.forEach(folder => {
+                if (!fs.existsSync(path.join(this.pathModel, folder))) {
+                    if (folder !== process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`])
+                        fs.mkdirSync(path.join(this.pathModel, folder), { recursive: true });
+                }
+            });
         }
     }
 
@@ -105,6 +140,56 @@ export default class MakeModel extends Common {
         ];
         value = value.toUpperCase();
         return numberValues.indexOf(value);
+    }
+
+    private updateModelFile(filePath: string, readbleStream: Readable) {
+        const originalContent = fs.createReadStream(filePath, 'utf8');
+
+        let interfaceModels = '';
+        let superModels = '';
+        let fieldsModels = '';
+
+        let rl = readLine.createInterface({ input: readbleStream });
+        let controlReadSection = false
+
+        rl.on('line', (line: string) => {
+            if (controlReadSection)
+                interfaceModels += line + '\n';
+
+            if (controlReadSection && line.includes('}') != false)
+                controlReadSection = false;
+
+            if (line.includes('//#region Interface') != false)
+                controlReadSection = true;
+            else if (line.includes('private static fields:') != false)
+                fieldsModels += line + '\n';
+            else if (line.includes('super({') != false)
+                superModels += line + '\n';
+        });
+
+        // Se escribe en el archivo original
+        rl = readLine.createInterface({ input: originalContent });
+        let mergedContent = '';
+        rl.on('line', (line: string) => {
+
+            if (controlReadSection && line.includes('}') != false) {
+                mergedContent += interfaceModels;
+                controlReadSection = false;
+            } else if (line.includes('//#region Interface') != false) {
+                controlReadSection = true;
+                mergedContent += line + '\n';
+            }
+            else if (line.includes('private static fields:') != false)
+                mergedContent += fieldsModels;
+            else if (line.includes('super({') != false)
+                mergedContent += superModels;
+            else if (!controlReadSection)
+                mergedContent += line + '\n';
+        });
+
+        rl.on('close', () => {
+            fs.writeFileSync(filePath, mergedContent);
+        });
     }
 
 }

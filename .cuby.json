@@ -1,5 +1,6 @@
 {
     "model": {
-        "paht": "testing/models"
-    }
+        "path": "testing/models/"
+    },
+    "index_folder": "testing"
 }

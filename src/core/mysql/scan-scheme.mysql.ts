@@ -57,4 +57,15 @@ export default class scanSchemeMysql extends Model<any> {
         `;
         return await this.query(this.sqlQuery);
     }
+
+    public async getDatabase(): Promise<string[]> {
+        try {
+            this.sqlQuery = `
+        SHOW DATABASES WHERE \`Database\` NOT LIKE 'mysql%' AND \`Database\` NOT LIKE 'information_schema%' AND \`Database\` NOT LIKE 'performance_schema%';`;
+            const database = await this.query(this.sqlQuery);
+            return Array.isArray(database) ? database.map((value) => value.Database) : [];
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    }
 }

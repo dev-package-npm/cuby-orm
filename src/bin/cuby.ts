@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import MakeModel from '../make/make-model';
 import { version } from '../../package.json';
-import { model } from '../../.cuby.json';
+import { model, index_folder } from '../../.cuby.json';
 
 export default class Cuby extends MakeModel {
     //#region Private properties
@@ -24,7 +24,8 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:scan:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:migration ')}Create a model with the specified name.
-
+        ${ansiColors.cyan('db:config ')}Create a model with the specified name.
+        
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
     
@@ -33,12 +34,12 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('--add ')}Name module.`;
 
     protected version: string = version;
-    protected pathIndex: string = path.join(path.resolve(), 'testing');
+    protected pathIndex: string = path.join(path.resolve(), index_folder);
 
     //#endregion
 
     constructor() {
-        super({ fileNameModel: 'model.ts', pathModel: path.join(path.resolve(), '/testing/models/') });
+        super({ fileNameModel: 'model.ts', pathModel: path.join(path.resolve(), model.path) });
         //? Takes the data entered by the terminal, and stores it
         process.title = `${Array.from(process.argv).slice(2).join(" ")}`;
         this.input = process.title.split(" ");
@@ -49,7 +50,7 @@ ${ansiColors.yellowBright('Database')}
             const params = this.input[0];
             // console.log(params);
             if (params === "--help" || params === "-h" || params == "") {
-                if (this.validateQuantityArguments(this.input, 1))
+                if (this.validateQuantityArguments(this.input, 0))
                     this.printHelp();
             }
             else if (params == '-v' || params == '--version') {
@@ -68,8 +69,7 @@ ${ansiColors.yellowBright('Database')}
                 else if (params == 'db:seed') {
                 }
                 else if (params == 'db:scan:model') {
-                    if (this.validateQuantityArguments(this.input, 2))
-                        await this.scanModel(this.input.slice(1));
+                    await this.scanModel();
                 }
                 else if (params == 'db:migration') {
                 }
@@ -89,9 +89,10 @@ ${ansiColors.yellowBright('Database')}
     }
 
     private validateQuantityArguments(params: string[], quantity: number): boolean {
-        if (params.length != quantity) {
+        if (params.length - 1 > quantity)
             throw new Error(ansiColors.redBright(`This action does not accept more than '${ansiColors.yellowBright(String(quantity))}' arguments`));
-        }
+        else if (params.length - 1 < quantity)
+            throw new Error(ansiColors.redBright(`This action expects '${ansiColors.yellowBright(String(quantity))}' arguments`));
         else return true;
     }
 
@@ -165,27 +166,31 @@ ${ansiColors.yellowBright('Database')}
     }
 
     // TODO Tener encuenta posibilidad de esacanera varias tablas, pero poner ruta de destino de modelos obligatoriamente 
-    private async scanModel(params: Array<string>) {
+    private async scanModel() {
         try {
-            if (params.length != 0)
-                for (const item of params) {
-                    if (this.regExpEspecialCharacter.test(item))
-                        throw new Error(ansiColors.redBright("Unsupported characters: " + item));
-                    await this.executeAction(item, 'scan:model');
-                }
-            else
+            const db = await this.getDatabase();
+            if (Array.isArray(db) && db.length > 0)
                 await inquirer.prompt({
-                    type: 'input',
-                    name: 'database',
-                    message: 'Write the name of the database to scan: ',
+                    type: 'checkbox',
+                    name: 'databases',
+                    choices: db,
+                    message: 'Select one or more databases to scan: ',
                 }).then(async (answer) => {
-                    await this.executeAction(answer.database, 'scan:model');
+                    if (answer.databases.length != 0) {
+                        this.folderDatabaseModel = answer.databases;
+                        this.createFolderModelScaned();
+                        for (const db of answer.databases) {
+                            await this.executeAction(db, 'scan:model');
+                        }
+                        this.pathModel = this.originalPathModel;
+                    }
+                    else throw new Error(ansiColors.yellowBright('You have not selected any value'));
                 });
+            else throw new Error(ansiColors.yellowBright('No databases found'));
         } catch (error: any) {
             throw new Error(error.message);
         }
     }
-
 
     private async executeAction(value: string, type: 'seed' | 'migration' | 'model' | 'scan:model') {
         try {
