@@ -1,4 +1,5 @@
-import { Database, PoolConnection } from "./database.mysql";
+import { LoaderDatabase } from "../../config/load-database.config";
+import { Database, PoolConnection } from "../database";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
 import { TCompuestSentence } from "./interfaces/sql";
 
@@ -88,7 +89,7 @@ export class Forge<T> extends Database {
     private readonly addConstraintStr: TCompuestSentence = 'ADD CONSTRAINT';
 
     constructor() {
-        super();
+        super(new LoaderDatabase().configDB);
         // this.db = async () => { return await this.getConnection() };
         this.loadDatabase();
     }

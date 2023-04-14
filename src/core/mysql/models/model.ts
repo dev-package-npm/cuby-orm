@@ -1,6 +1,12 @@
 //#region Imports
-import { Database } from '../database.mysql';
+import { PoolConnection } from 'promise-mysql';
+import { Pool } from 'pg';
+import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
+import path from 'node:path';
+import fs from 'node:fs';
+import { TConfigCuby } from '../../../config/interfaces/load-database.interface';
+import { LoaderDatabase } from '../../../config/load-database.config';
 //#endregion
 
 //#region Interface
@@ -66,16 +72,15 @@ export type TAlias2<T, S> = { column: T extends string ? T : never, name: S };
 // extends infer K ? K extends string ? K : never : never
 type TArrayColumns<T> = Array<Required<keyof T>>;
 //#endregion
+const loaderDatabase = new LoaderDatabase();
 
-const database = new Database();
-
-export class Model<T> {
+export abstract class Model<T> {
     private _table: string = '';
     private _primaryKey: keyof T | '' = '';
     private _baseModel: BaseModel<T>;
 
     protected _fields: TArrayColumns<T> = [];
-    protected database: Database;
+    protected database: Promise<Database>;
 
 
     constructor(params?: IConstructorModel<T>) {
@@ -85,7 +90,7 @@ export class Model<T> {
             this._primaryKey = primaryKey;
             this._fields = fields;
         }
-        this.database = database;
+        this.database = loaderDatabase.load()
         this._baseModel = new BaseModel<T>(this._table, this);
     }
 
@@ -113,11 +118,21 @@ export class Model<T> {
 
     public async query(sentence: string, values?: any): Promise<any> {
         try {
-            const connected = await this.database.getConnection();
-            const results = await connected.query(sentence, values);
-            connected.release();
-            connected.destroy();
-            return results;
+            let results;
+            switch ((await this.database).type) {
+                case 'mysql':
+                    const connected = await (await this.database).getConnection() as PoolConnection;
+                    results = await connected.query(sentence, values);
+                    connected.release();
+                    connected.destroy();
+                    return results;
+                    break;
+                case 'postgresql':
+                    const pool = await (await this.database).getConnection() as Pool;
+                    results = await pool.query(sentence, values);
+                    return results.rows;
+                    break;
+            }
         } catch (error: any) {
             throw new Error(error.message);
         }

@@ -1,6 +1,7 @@
 {
     "model": {
-        "path": "testing/models/"
+        "path": "src/models/",
+        "name": "model.ts"
     },
-    "index_folder": "testing"
+    "index_folder": "src"
 }

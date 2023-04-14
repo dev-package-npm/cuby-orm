@@ -64,7 +64,8 @@ export class BaseModel<T> {
     }
 
     public async build(): Promise<T[] | T> {
-        if (this.alias.length != 0) {
+        if (Object.keys(this.alias).length != 0) {
+            console.log(this.selectColumns);
             if (this.selectColumns.length == 0 || this.selectColumns[0] == '*') {
                 this.selectColumns = [];
                 for (const item of this.model.fields) {
@@ -96,7 +97,6 @@ export class BaseModel<T> {
         if (this.orderByColumn) {
             sqlQuery += ` ORDER BY ${this.orderByColumn} ${this.orderByDirection}`;
         }
-        console.log(sqlQuery);
         const resultQuery = await this.model.query(sqlQuery);
         this.clearVariable();
         return Promise.resolve(resultQuery);

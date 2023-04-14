@@ -4,7 +4,7 @@ import path from 'path';
 
 //#region deleteProperty
 
-export function deleteProperty(data: any, arrayProperty: Array<any>): void {
+function deleteProperty(data: any, arrayProperty: Array<any>): void {
     for (const item of arrayProperty) {
         delete data[item];
     }
@@ -17,4 +17,5 @@ const loadEnvFile = () => {
     dotenvExpand.expand(config);
 };
 
-export { loadEnvFile };
+
+export { loadEnvFile, deleteProperty };

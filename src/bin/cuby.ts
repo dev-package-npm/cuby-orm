@@ -1,17 +1,29 @@
 import inquirer from 'inquirer';
 import ansiColors from 'ansi-colors';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import MakeModel from '../make/make-model';
-import { version } from '../../package.json';
-import { model, index_folder } from '../../.cuby.json';
 
-export default class Cuby extends MakeModel {
+//#region  Interfaces
+interface ICubyConfig {
+    model: {
+        name: string;
+        path: string;
+    },
+    index_folder: string;
+}
+//#endregion
+
+const { model, index_folder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../.cuby.json'), 'utf8'));
+const { version }: { version: string } | { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
+
+export class Cuby extends MakeModel {
     //#region Private properties
     private input: string[];
     private abrevCommand: string = 'cuby';
     private pathPackage = path.join(path.resolve(), '/package.json');
     private regExpEspecialCharacter: RegExp = /[!@#$%^&*()+={}\[\]|\\:;'",.<>/?]/;
+    private pathConfig: string = path.join(__dirname, '../../.cuby.json');
 
     private help: string = `
 ${ansiColors.yellowBright('Database')}
@@ -22,9 +34,9 @@ ${ansiColors.yellowBright('Database')}
     COMMAND LINE FLAGS
         ${ansiColors.cyan('db:seed ')}Initialize a folder structure for the api, with some utilities.
         ${ansiColors.cyan('db:model ')}Create a model with the specified name.
-        ${ansiColors.cyan('db:scan:model ')}Create a model with the specified name.
+        ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
         ${ansiColors.cyan('db:migration ')}Create a model with the specified name.
-        ${ansiColors.cyan('db:config ')}Create a model with the specified name.
+        ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
         
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
@@ -39,7 +51,7 @@ ${ansiColors.yellowBright('Database')}
     //#endregion
 
     constructor() {
-        super({ fileNameModel: 'model.ts', pathModel: path.join(path.resolve(), model.path) });
+        super({ fileNameModel: model.name, pathModel: path.join(path.resolve(), model.path) });
         //? Takes the data entered by the terminal, and stores it
         process.title = `${Array.from(process.argv).slice(2).join(" ")}`;
         this.input = process.title.split(" ");
@@ -54,24 +66,34 @@ ${ansiColors.yellowBright('Database')}
                     this.printHelp();
             }
             else if (params == '-v' || params == '--version') {
-                if (this.validateQuantityArguments(this.input, 1))
+                if (this.validateQuantityArguments(this.input, 0))
                     console.log('Version', ansiColors.cyan(this.version));
+                // console.log(import('../../cuby.config'));
+            }
+            else if (this.input[1] == '--help' || this.input[1] == '-h') {
+                if (this.validateQuantityArguments(this.input, 1))
+                    this.printHelpForCommand(this.input[0]);
             }
             else if (fs.existsSync(this.pathPackage)) {
                 if (!fs.existsSync(this.pathIndex))
                     throw new Error(ansiColors.blueBright('You must initialize your project'));
 
-                else if (params == 'db:model' || params == 'm') {
+                else if (params == 'db:model') {
                     if (fs.existsSync(this.pathModel))
                         await this.model(this.input.slice(1));
                     else throw new Error(ansiColors.yellowBright('The directory provided is invalid or does not exist. Path: ') + ansiColors.blueBright(this.pathModel));
                 }
                 else if (params == 'db:seed') {
+                    console.log(ansiColors.yellowBright('no implementation'));
                 }
                 else if (params == 'db:scan:model') {
                     await this.scanModel();
                 }
                 else if (params == 'db:migration') {
+                    console.log(ansiColors.yellowBright('no implementation'));
+                }
+                else if (params == 'db:config') {
+                    this.setConfig(this.input.slice(1));
                 }
                 else throw new Error(ansiColors.yellowBright('Command is not valid'));
             }
@@ -86,6 +108,58 @@ ${ansiColors.yellowBright('Database')}
         if (fs.existsSync(this.pathPackage))
             console.log(this.help);
         else throw new Error(ansiColors.yellowBright('No initialized node project exists'));
+    }
+
+    protected printHelpForCommand(params: string, abrevCommand?: string): void {
+        try {
+            const objParams: any = {};
+
+            switch (params) {
+                case 'db:config':
+                    console.log(`${abrevCommand || this.abrevCommand} ${params} ${ansiColors.blueBright('model.path <path>')}`);
+                    break;
+                case 'db:model':
+                    console.log(`${abrevCommand || this.abrevCommand} ${params} ${ansiColors.blueBright('<model1 model2>')} separated by a space`);
+                    break;
+                default:
+                    throw new Error(ansiColors.yellowBright(`The ${ansiColors.blueBright(params[0])} command has no help `));
+                    break;
+            }
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    }
+
+    protected setConfig(params: string[]): void {
+        try {
+            const objParams: any = {};
+
+            for (let i = 0; i < params.length; i += 2) {
+                const key = params[i];
+                const value = params[i + 1];
+                objParams[key] = value;
+            }
+            const config = fs.readFileSync(this.pathConfig, 'utf8');
+            let content: ICubyConfig = JSON.parse(config);
+            for (const item of Object.keys(objParams)) {
+                switch (item) {
+                    case 'model.path':
+                        if (objParams[item].charAt(objParams[item].length - 1) != '/')
+                            objParams[item] += '/';
+                        content.model.path = objParams[item];
+                        this.pathModel = objParams[item];
+                        break;
+
+                    default:
+                        throw new Error(ansiColors.yellowBright('Invalid attribute ' + ansiColors.blueBright(item)));
+                        break;
+                }
+                fs.writeFileSync(this.pathConfig, JSON.stringify(content, null, 4));
+                console.log(`${ansiColors.yellowBright(`Done changing path from ${ansiColors.blueBright(JSON.parse(config).model.path)} to ${ansiColors.blueBright(content.model.path)}`)}`);
+            }
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     private validateQuantityArguments(params: string[], quantity: number): boolean {
@@ -146,7 +220,7 @@ ${ansiColors.yellowBright('Database')}
         try {
             if (params.length != 0)
                 for (const item of params) {
-                    if (this.regExpEspecialCharacter.test(item))
+                    if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_')
                         throw new Error(ansiColors.redBright("Unsupported characters: " + item));
                     await this.executeAction(item, 'model');
                 }
@@ -156,7 +230,7 @@ ${ansiColors.yellowBright('Database')}
                     name: 'model',
                     message: 'Write the name of the model: ',
                 }).then(async (answer) => {
-                    if (this.regExpEspecialCharacter.test(answer.model))
+                    if (this.regExpEspecialCharacter.test(answer.model) || answer.model.charAt(0) == '-' || answer.model.charAt(0) == '_')
                         throw new Error(ansiColors.redBright("Unsupported characters: " + answer.model));
                     await this.executeAction(answer.model, 'model');
                 });
@@ -165,7 +239,6 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
-    // TODO Tener encuenta posibilidad de esacanera varias tablas, pero poner ruta de destino de modelos obligatoriamente 
     private async scanModel() {
         try {
             const db = await this.getDatabase();

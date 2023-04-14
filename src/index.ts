@@ -1,9 +1,4 @@
-#!/usr/bin/env node
-import Cuby from "./bin/cuby";
-
-const cuby = new Cuby();
-
-cuby.interpreInput();
-
-export { PoolConnection } from "./core/mysql/database.mysql";
 export { Model } from "./core/mysql/models/model";
+export { Cuby } from "./bin/cuby";
+export { TConfigCuby } from "./config/interfaces/load-database.interface";
+export { configDatabase } from "./config/load-database.config";
