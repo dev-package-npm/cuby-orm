@@ -3,5 +3,15 @@
         "path": "src/models/",
         "name": "model.ts"
     },
+    "database": {
+        "seeders": {
+            "path": "src/database/seeders/",
+            "name": "seed.ts"
+        },
+        "migrations": {
+            "path": "src/database/migrations/",
+            "name": "migration.ts"
+        }
+    },
     "index_folder": "src"
 }

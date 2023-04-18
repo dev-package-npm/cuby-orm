@@ -1,13 +1,15 @@
-import { LoaderDatabase } from "../../config/load-database.config";
+import { Pool } from "pg";
 import { Database, PoolConnection } from "../database";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
 import { TCompuestSentence } from "./interfaces/sql";
 
+const database = new Database();
+
 export class Forge<T> extends Database {
-    protected db!: PoolConnection;
     private fields: string[] = [];
     private tableFields: string[] = [];
     private sqlQuery: string = '';
+    protected database: Database;
 
     private readonly tableColumnsAttributes: TGetTableColumnAttribute<T>[] = [
         {
@@ -80,6 +82,7 @@ export class Forge<T> extends Database {
         }
     ];
 
+    private foreingKeys: string[] = [];
     private sqlStr: string = '';
     private readonly createTableStr: TCompuestSentence = 'CREATE TABLE';
     private readonly dropTableStr: TCompuestSentence = 'DROP TABLE';
@@ -89,13 +92,8 @@ export class Forge<T> extends Database {
     private readonly addConstraintStr: TCompuestSentence = 'ADD CONSTRAINT';
 
     constructor() {
-        super(new LoaderDatabase().configDB);
-        // this.db = async () => { return await this.getConnection() };
-        this.loadDatabase();
-    }
-
-    private async loadDatabase() {
-        this.db = await this.getConnection();
+        super();
+        this.database = database;
     }
 
     protected addField(fields: TColumns<T>) {
@@ -125,7 +123,7 @@ export class Forge<T> extends Database {
             this.sqlStr = '';
         }
         // console.log(this.sqlQuery);
-        return await this.executeQuery(this.sqlQuery);
+        return await this.query(this.sqlQuery);
     }
 
     protected async createTableIfNotExists(name: string, tableAttributes?: TTableAttribute) {
@@ -143,41 +141,40 @@ export class Forge<T> extends Database {
             this.sqlStr = '';
         }
         // console.log(this.sqlQuery);
-        return await this.executeQuery(this.sqlQuery);
+        return await this.query(this.sqlQuery);
     }
 
     protected async addForeignKey(table: string, data: TForeignKey<T>) {
         const tableAttributes = (<TTforeignKeyStructure>this.tableColumnsAttributes.find(item => item.attribute == 'foreignKey')?.value)
-        if (this.sqlStr != '')
-            this.sqlStr += `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
-        else
-            this.sqlStr = `${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`;
-        if (data.onDelete != undefined) {
-            this.sqlStr += ` ${tableAttributes.onDelete} ${data.onDelete}`;
+        if (table !== undefined && data !== undefined) {
+            this.foreingKeys.push(`${this.alterTableStr} \`${table}\` ${this.addConstraintStr} \`FK_${table.charAt(0) + table.charAt(table.length - 1)}_${data.references.table.charAt(0) + data.references.table.charAt(data.references.table.length - 1)}\` ${tableAttributes.foreignKey} (\`${data.column}\`) ${tableAttributes.reference} \`${data.references.table}\` (\`${data.references.column}\`)`);
+
+            if (data.onDelete != undefined) {
+                this.foreingKeys[this.foreingKeys.length - 1] += ` ${tableAttributes.onDelete} ${data.onDelete}`;
+            }
+            if (data.onUpdate != undefined) {
+                this.foreingKeys[this.foreingKeys.length - 1] += ` ${tableAttributes.onUpdate} ${data.onUpdate}`;
+            }
         }
-        if (data.onUpdate != undefined) {
-            this.sqlStr += ` ${tableAttributes.onUpdate} ${data.onUpdate}`;
-        }
-        this.sqlStr += ';\n';
     }
 
     protected async dropTable(name: string) {
         this.sqlQuery = `${this.dropTableStr} \`${name}\``;
-        return await this.executeQuery(this.sqlQuery);
+        return await this.query(this.sqlQuery);
     }
 
     protected async dropTableIfExists(name: string) {
         this.sqlQuery = `${this.dropTableStr} ${this.ifExistsStr} \`${name}\``;
         // console.log(this.sqlQuery);
-        return await this.executeQuery(this.sqlQuery);
+        return await this.query(this.sqlQuery);
     }
 
     protected async enableForeignKeyChecks() {
-        return await this.executeQuery('SET FOREIGN_KEY_CHECKS=1');
+        return await this.query('SET FOREIGN_KEY_CHECKS=1');
     }
 
     protected async disableForeignKeyChecks() {
-        return await this.executeQuery('SET FOREIGN_KEY_CHECKS=0');
+        return await this.query('SET FOREIGN_KEY_CHECKS=0');
     }
 
     public orderFields(item: keyof TColumns<T> extends infer K ? K extends string ? K : never : never, fields: TColumns<T>) {
@@ -241,12 +238,27 @@ export class Forge<T> extends Database {
         return value;
     }
 
-    private async executeQuery(sentence: string, values?: any): Promise<any> {
-        // let db = await this.getConnection();
-        const results = await this.db.query(sentence, values);
-        await this.db.release();
-        this.db.destroy();
-        return results;
+    private async query(sentence: string, values?: any): Promise<any> {
+        try {
+            let results;
+            await this.database.initialize();
+            switch (this.database.type) {
+                case 'mysql':
+                    const connected = await this.database.getConnection() as PoolConnection;
+                    results = await connected.query(sentence, values);
+                    connected.release();
+                    connected.destroy();
+                    return results;
+                    break;
+                case 'postgresql':
+                    const pool = await this.database.getConnection() as Pool;
+                    results = await pool.query(sentence, values);
+                    return results.rows;
+                    break;
+            }
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     private validateAttributeColumns(attribute: keyof TColumnsAttributes<T>, fields: TColumnsAttributes<T>) {
