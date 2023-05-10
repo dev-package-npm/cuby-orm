@@ -26,7 +26,7 @@ export default class MakeModel extends Common {
         this.originalPathModel = this.pathModel;
     }
 
-    protected createModel(nameClass: string, inputModel: string) {
+    protected async createModel(nameClass: string, inputModel: string) {
         const file = createFile({
             fileName: `${this.replaceAll(inputModel, '-')}.${this.fileNameModel}`,
             classes: [
@@ -62,7 +62,8 @@ export default class MakeModel extends Common {
 
         if (this.folderDatabaseModel.length !== 0) {
             this.pathModel = this.originalPathModel;
-            if (this.folderModel !== process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`])
+            if (this.folderModel !== await this.scanScheme
+                .getNameDatabase())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
 
@@ -105,7 +106,7 @@ export default class MakeModel extends Common {
             let nameClassModel = this.addPrefix(model, 'Model');
             this.fields = this.fields.slice(0, this.fields.length - 2);
             this.fields += ']';
-            this.createModel(nameClassModel, item.table.toLocaleLowerCase());
+            await this.createModel(nameClassModel, item.table.toLocaleLowerCase());
             this.fields = '';
             this.interface = [];
         }
@@ -115,11 +116,12 @@ export default class MakeModel extends Common {
         return this.scanScheme.getDatabase();
     }
 
-    protected createFolderModelScaned() {
+    protected async createFolderModelScaned() {
         if (this.folderDatabaseModel.length !== 0) {
-            this.folderDatabaseModel.forEach(folder => {
+            this.folderDatabaseModel.forEach(async folder => {
                 if (!fs.existsSync(path.join(this.pathModel, folder))) {
-                    if (folder !== process.env[`DB_NAME_${String(process.env.NODE_ENV).toUpperCase()}`])
+                    const nameDatabase = await this.scanScheme.getNameDatabase();
+                    if (folder !== nameDatabase)
                         fs.mkdirSync(path.join(this.pathModel, folder), { recursive: true });
                 }
             });

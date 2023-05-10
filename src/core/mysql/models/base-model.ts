@@ -1,4 +1,4 @@
-import { Model, TAlias } from "./model";
+import { Model } from "./model";
 
 export type TSubQuery<A extends string> = string | {
     select: string;

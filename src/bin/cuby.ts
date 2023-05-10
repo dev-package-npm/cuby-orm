@@ -11,6 +11,16 @@ interface ICubyConfig {
         path: string;
     },
     index_folder: string;
+    database: {
+        seeders: {
+            path: string;
+            name: string
+        };
+        migrations: {
+            path: string;
+            name: string
+        }
+    },
 }
 //#endregion
 
@@ -57,8 +67,9 @@ ${ansiColors.yellowBright('Database')}
         this.input = process.title.split(" ");
     }
 
-    async interpreInput(): Promise<void> {
+    public async interpreInput(input?: string[]): Promise<void> {
         try {
+            input !== undefined ? this.input = input : '';
             const params = this.input[0];
             // console.log(params);
             if (params === "--help" || params === "-h" || params == "") {
@@ -66,6 +77,7 @@ ${ansiColors.yellowBright('Database')}
                     this.printHelp();
             }
             else if (params == '-v' || params == '--version') {
+                console.log(await this.scanScheme.getNameDatabase());
                 if (this.validateQuantityArguments(this.input, 0))
                     console.log('Version', ansiColors.cyan(this.version));
                 // console.log(import('../../cuby.config'));
@@ -78,7 +90,7 @@ ${ansiColors.yellowBright('Database')}
                 if (!fs.existsSync(this.pathIndex))
                     throw new Error(ansiColors.blueBright('You must initialize your project'));
 
-                else if (params == 'db:model') {
+                else if (params == 'db:model' || params == 'db:m') {
                     if (fs.existsSync(this.pathModel))
                         await this.model(this.input.slice(1));
                     else throw new Error(ansiColors.yellowBright('The directory provided is invalid or does not exist. Path: ') + ansiColors.blueBright(this.pathModel));
@@ -101,6 +113,10 @@ ${ansiColors.yellowBright('Database')}
         } catch (error: any) {
             console.error(error.message);
         }
+    }
+
+    public getHelp(): string {
+        return this.help;
     }
 
     //#region Private methods
@@ -190,31 +206,6 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
-    private async interpretAnswer(answer: string, action: 'add' | 'rm' = 'add') {
-        try {
-            switch (answer) {
-                case 'ws':
-                    // if (action == 'add')
-                    // await this.initWs(answer);
-                    // else if (action == 'rm')
-                    // await this.removeWs(answer);
-                    break;
-                case 'db:mysql':
-                    // if (action == 'add')
-                    //     await this.initDatabase(answer);
-                    // else if (action == 'rm') {
-                    //     await this.removeDatabase(answer);
-                    // }
-                    break;
-                default:
-                    throw new Error(ansiColors.redBright(ansiColors.redBright(`Invalid '${answer}' value`)));
-                    break;
-            }
-        } catch (error: any) {
-            throw new Error(error.message);
-        }
-    }
-
     // TODO Proporcionar ruta para el modelo a crear opcionalmente 
     private async model(params: Array<string>) {
         try {
@@ -251,7 +242,7 @@ ${ansiColors.yellowBright('Database')}
                 }).then(async (answer) => {
                     if (answer.databases.length != 0) {
                         this.folderDatabaseModel = answer.databases;
-                        this.createFolderModelScaned();
+                        await this.createFolderModelScaned();
                         for (const db of answer.databases) {
                             await this.executeAction(db, 'scan:model');
                         }
@@ -286,12 +277,12 @@ ${ansiColors.yellowBright('Database')}
                             name: 'res',
                             message: `you want to override the '${value.toLocaleLowerCase()}' model`,
                             default: false
-                        }).then((answer2) => {
+                        }).then(async (answer2) => {
                             if (answer2.res)
-                                this.createModel(nameClassModel, value.toLocaleLowerCase());
+                                await this.createModel(nameClassModel, value.toLocaleLowerCase());
                         });
                     } else
-                        this.createModel(nameClassModel, value.toLocaleLowerCase());
+                        await this.createModel(nameClassModel, value.toLocaleLowerCase());
                     break;
             }
         } catch (error: any) {

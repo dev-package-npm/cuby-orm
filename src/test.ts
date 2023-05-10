@@ -1,28 +1,19 @@
-// import { LoaderDatabase } from "./config/load-database.config";
+import { Database, PoolConnection } from "./core/database";
 
-import { Model } from "./core/mysql/models/model";
-// const loaderDatabase = new LoaderDatabase();
-// loaderDatabase.load().then((result) => {
+const database = new Database();
 
-//     console.log();
-// }).catch(error => {
-//     console.log(error);
-// })
+const main = async () => {
+    try {
+        await database.initialize();
+        const pool = await database.getConnection<PoolConnection>();
 
-// #region Interface
-export interface IUsers1Model {
-}
-//#endregion
+        const results = await pool.query('SHOW DATABASES');
+        pool.destroy();
+        pool.release();
 
-class Users1Model extends Model<IUsers1Model> {
-    private static fields: (keyof IUsers1Model)[] = [];
-
-    constructor() {
-        super({ table: 'users1', primaryKey: '', fields: Users1Model.fields });
+        console.log(results);
+    } catch (error: any) {
+        console.log(error.message);
     }
 }
-
-const user1 = new Users1Model();
-user1.select().then(users => {
-    console.log(users);
-}).catch(error => console.log(error.message));
+main();

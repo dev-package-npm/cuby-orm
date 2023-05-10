@@ -10,25 +10,6 @@ Install package.
 npm i cuby-orm
 ```
 
-
-You need to create an environment variable file with the following name `.env` in the root directory. With the following content.
-
-```plaintext
-# system environments
-NODE_ENV=development
-# NODE_ENV=production
-# DB config
-HOST_DB_DEVELOPMENT=127.0.0.1
-USER_DB_DEVELOPMENT=root
-USER_PASSWORD_DEVELOPMENT=
-DB_NAME_DEVELOPMENT=testing
-
-HOST_DB_PRODUCTION=127.0.0.1
-USER_DB_PRODUCTION=user_test
-USER_PASSWORD_PRODUCTION=12345
-DB_NAME_PRODUCTION=db_test
-```
-
 To show help execute the following command:
 
 ```

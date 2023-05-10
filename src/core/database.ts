@@ -23,9 +23,12 @@ type TConfigCubyEnv = (
     }
 );
 
+type TConfigType = 'mysql' | 'postgresql';
+type TConfigPool = PoolConfig | PoolConfigPg;
+
 
 export class Database {
-    protected config!: mysql.PoolConfig | PoolConfigPg;
+    protected config!: TConfigPool;
     public type!: TConfigCuby['type'];
 
     private rootDir: string = path.resolve();
@@ -50,6 +53,12 @@ export class Database {
         }
     }
 
+    public async getConfigDatabase<T extends TConfigType>(): Promise<T extends 'mysql' ? PoolConfig : PoolConfigPg>
+    public async getConfigDatabase<T extends TConfigType>(): Promise<T extends 'postgresql' ? PoolConfigPg : never>
+    public async getConfigDatabase(): Promise<any> {
+        return this.config;
+    }
+
     private setValue(params: Omit<TConfigCuby, 'environments'>) {
         const { type, connection } = params;
         switch (type) {
@@ -69,7 +78,7 @@ export class Database {
 
         const env: string = process.env.NODE_ENV as string;
         if (this._config == undefined) {
-            this._config = await this.getConfigDatabase();
+            this._config = await this.getConfigDatabaseForFile();
         }
 
         if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
@@ -78,7 +87,7 @@ export class Database {
             this.setValue(this._config);
     }
 
-    private async getConfigDatabase(): Promise<TConfigCuby> {
+    private async getConfigDatabaseForFile(): Promise<TConfigCuby> {
         try {
             const pathConfigFile = searchFileConfig(this.rootDir, 'cuby.config');
             if (pathConfigFile !== '' && pathConfigFile !== undefined) {
