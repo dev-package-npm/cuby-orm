@@ -8,10 +8,9 @@
     "cuby": "./build/bin/index.js"
   },
   "scripts": {
-    "build": "rm -rf build  && npx tsc ",
-    "watch": "rm -rf build && npx tsc -w",
+    "build": "rm -rf build  && npx tsc  -p tsconfig.prod.json",
+    "watch:dev": "rm -rf build && tsc -p tsconfig.dev.json -w",
     "prepare": "npm run build",
-    "prepublish": "",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

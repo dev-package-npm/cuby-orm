@@ -1,4 +1,4 @@
-import { TConfigCuby } from "./core/database";
+import { TConfigCuby } from "../core/database";
 
 export const configDatabase: TConfigCuby = {
     type: 'mysql',

@@ -1,4 +1,8 @@
 tsconfig.json
-src
+tsconfig.dev.json
+tsconfig.prod.json
 .npmrc
 CONTRIBUTING.md
+src
+.vscode
+.github

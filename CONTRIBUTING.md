@@ -1,6 +1,32 @@
+# Development documentation
+
+* [Spanish](#pasos-iniciales)
+* [English](#quick-start)
+
+## Pasos iniciales
+
+* [Comandos importantes](#Comandos importantes) 
+
+Clonar el repositorio desde la rama development.
+
+```
+https://github.com/dev-package-npm/cuby-orm.git
+```
+
+### Comandos importantes
+
+Crear referencia del comando globalmente usar el siguiente comando.
+
+Este comando le habilita la opción de ejectuar el comando cli como si estubiera en producción. 
+
+```bash
+npm link
+```
 
 comando para ver lo que se publicaría en npm
 
 ```
 npm publish --dry-run
 ```
+
+## Quick start

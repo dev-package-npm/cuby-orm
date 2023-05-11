@@ -1,0 +1,14 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "build/",
+        "rootDir": "src"
+    },
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "src/testing",
+        "src/cuby.config.ts",
+    ]
+}
