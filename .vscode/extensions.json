@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "formulahendry.code-runner",
+        "aaron-bond.better-comments",
+        "cweijan.vscode-office",
+        "gruntfuggly.todo-tree",
+        "neptunedesign.vs-sequential-number",
+        "christian-kohler.path-intellisense",
+        "mhutchie.git-graph",
+        "irongeek.vscode-env",
+        "adpyke.codesnap",
+        "kevinkyang.auto-comment-blocks"
+    ]
+}
