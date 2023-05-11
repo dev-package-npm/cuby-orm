@@ -1,4 +1,4 @@
-import { Database, PoolConnection } from "./core/database";
+import { Database, PoolConnection } from "../core/database";
 
 const database = new Database();
 

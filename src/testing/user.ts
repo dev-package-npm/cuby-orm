@@ -1,7 +1,7 @@
 // import { Users1Model } from '../../models/users1.model';
 
-import { TColumns } from "./core/mysql/interfaces/forge.interface";
-import { Migration } from "./core/mysql/migration.mysql";
+import { TColumns } from "../core/mysql/interfaces/forge.interface";
+import { Migration } from "../core/mysql/migration.mysql";
 
 interface IUser {
     id: number,
