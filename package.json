@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/dev-package-npm/cuby-orm#readme",
   "publishConfig": {
-    "@jairo2020:registry": "https://npm.pkg.github.com"
+    "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
     "ansi-colors": "^4.1.3",
