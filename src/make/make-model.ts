@@ -7,6 +7,9 @@ import { Common } from "./common";
 import ansiColors from "ansi-colors";
 import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
 
+const { name }: { name: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), './package.json'), 'utf8'));
+
+
 export default class MakeModel extends Common {
     protected fileNameModel: string;
     protected pathModel: string;
@@ -18,6 +21,7 @@ export default class MakeModel extends Common {
     private primariKey: string = '';
     private folderModel: string = '';
     private isScan: boolean = false;
+    public namePackage = name;
 
     constructor(params: { fileNameModel: string, pathModel: string }) {
         super();
@@ -47,7 +51,7 @@ export default class MakeModel extends Common {
                 }
             ],
             imports: [
-                { moduleSpecifier: 'cuby-orm', namedImports: [{ name: ' Model ' }] },
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../core/mysql/models/model' : this.namePackage, namedImports: [{ name: ' Model ' }] },
             ],
             interfaces: [
                 {

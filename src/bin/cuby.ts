@@ -3,6 +3,7 @@ import ansiColors from 'ansi-colors';
 import fs from 'node:fs';
 import path from 'node:path';
 import MakeModel from '../make/make-model';
+import { Mixin } from 'ts-mixer';
 
 //#region  Interfaces
 interface ICubyConfig {
@@ -25,9 +26,10 @@ interface ICubyConfig {
 //#endregion
 
 const { model, index_folder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../.cuby.json'), 'utf8'));
-const { version }: { version: string } | { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
+// const packageNpm2 = JSON.parse(fs.readFileSync(path.join(path.resolve(), './package.json'), 'utf8'));
+const { version }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
 
-export class Cuby extends MakeModel {
+export class Cuby extends Mixin(MakeModel) {
     //#region Private properties
     private input: string[];
     private abrevCommand: string = 'cuby';
@@ -71,13 +73,11 @@ ${ansiColors.yellowBright('Database')}
         try {
             input !== undefined ? this.input = input : '';
             const params = this.input[0];
-            // console.log(params);
             if (params === "--help" || params === "-h" || params == "") {
                 if (this.validateQuantityArguments(this.input, 0))
                     this.printHelp();
             }
             else if (params == '-v' || params == '--version') {
-                console.log(await this.scanScheme.getNameDatabase());
                 if (this.validateQuantityArguments(this.input, 0))
                     console.log('Version', ansiColors.cyan(this.version));
                 // console.log(import('../../cuby.config'));
@@ -206,24 +206,31 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
-    // TODO Proporcionar ruta para el modelo a crear opcionalmente 
     private async model(params: Array<string>) {
         try {
+            let response;
             if (params.length != 0)
                 for (const item of params) {
-                    if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_')
-                        throw new Error(ansiColors.redBright("Unsupported characters: " + item));
+                    if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_') {
+                        console.log(ansiColors.redBright("Unsupported characters: " + item));
+                        continue;
+                    }
                     await this.executeAction(item, 'model');
                 }
             else
                 await inquirer.prompt({
                     type: 'input',
-                    name: 'model',
-                    message: 'Write the name of the model: ',
+                    name: 'models',
+                    message: 'Write the name of models separated by space: ',
                 }).then(async (answer) => {
-                    if (this.regExpEspecialCharacter.test(answer.model) || answer.model.charAt(0) == '-' || answer.model.charAt(0) == '_')
-                        throw new Error(ansiColors.redBright("Unsupported characters: " + answer.model));
-                    await this.executeAction(answer.model, 'model');
+                    for (const item of String(answer.models).split(' ')) {
+                        if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_') {
+                            console.log(ansiColors.redBright("Unsupported characters: " + item));
+                            continue;
+                        }
+
+                        await this.executeAction(item, 'model');
+                    }
                 });
         } catch (error: any) {
             throw new Error(error.message);
