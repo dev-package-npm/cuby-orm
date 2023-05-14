@@ -9,6 +9,5 @@
     ],
     "exclude": [
         "src/testing",
-        "src/cuby.config.ts",
     ]
 }

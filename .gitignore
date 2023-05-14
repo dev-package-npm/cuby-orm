@@ -1,5 +1,4 @@
 node_modules
 build
-src/models
-src/database
+src/testing/models
 ./**/*.tgz

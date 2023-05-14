@@ -25,9 +25,10 @@ interface ICubyConfig {
 }
 //#endregion
 
-const { model, index_folder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../.cuby.json'), 'utf8'));
-// const packageNpm2 = JSON.parse(fs.readFileSync(path.join(path.resolve(), './package.json'), 'utf8'));
 const { version }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
+const { name }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), 'package.json'), 'utf8'));
+const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
+const { model, index_folder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../', nameConfigFile), 'utf8'));
 
 export class Cuby extends Mixin(MakeModel) {
     //#region Private properties
@@ -35,7 +36,7 @@ export class Cuby extends Mixin(MakeModel) {
     private abrevCommand: string = 'cuby';
     private pathPackage = path.join(path.resolve(), '/package.json');
     private regExpEspecialCharacter: RegExp = /[!@#$%^&*()+={}\[\]|\\:;'",.<>/?]/;
-    private pathConfig: string = path.join(__dirname, '../../.cuby.json');
+    private pathConfig: string = path.join(__dirname, '../../', nameConfigFile);
 
     private help: string = `
 ${ansiColors.yellowBright('Database')}
@@ -49,6 +50,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
         ${ansiColors.cyan('db:migration ')}Create a model with the specified name.
         ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
+        ${ansiColors.cyan('db:config:list')}List all config.
         
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
@@ -80,7 +82,6 @@ ${ansiColors.yellowBright('Database')}
             else if (params == '-v' || params == '--version') {
                 if (this.validateQuantityArguments(this.input, 0))
                     console.log('Version', ansiColors.cyan(this.version));
-                // console.log(import('../../cuby.config'));
             }
             else if (this.input[1] == '--help' || this.input[1] == '-h') {
                 if (this.validateQuantityArguments(this.input, 1))
@@ -105,6 +106,9 @@ ${ansiColors.yellowBright('Database')}
                     console.log(ansiColors.yellowBright('no implementation'));
                 }
                 else if (params == 'db:config') {
+                    this.setConfig(this.input.slice(1));
+                }
+                else if (params == 'db:config:list') {
                     this.setConfig(this.input.slice(1));
                 }
                 else throw new Error(ansiColors.yellowBright('Command is not valid'));
@@ -173,6 +177,13 @@ ${ansiColors.yellowBright('Database')}
                 fs.writeFileSync(this.pathConfig, JSON.stringify(content, null, 4));
                 console.log(`${ansiColors.yellowBright(`Done changing path from ${ansiColors.blueBright(JSON.parse(config).model.path)} to ${ansiColors.blueBright(content.model.path)}`)}`);
             }
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    }
+
+    protected getConfig(params: string[]): void {
+        try {
         } catch (error: any) {
             throw new Error(error.message);
         }

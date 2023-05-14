@@ -1,0 +1,17 @@
+{
+    "model": {
+        "path": "src/testing/models/",
+        "name": "model.ts"
+    },
+    "database": {
+        "seeders": {
+            "path": "src/testing/database/seeders/",
+            "name": "seed.ts"
+        },
+        "migrations": {
+            "path": "src/testing/database/migrations/",
+            "name": "migration.ts"
+        }
+    },
+    "index_folder": "src"
+}
