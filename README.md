@@ -25,7 +25,8 @@ Database
         cuby <flags> <options> More information
 
     COMMAND LINE FLAGS
-        db:seed Initialize a folder structure for the api, with some utilities.
+        db:seed Run seed specified by name or list of names.
+	db:seed:create Create file seed.
         db:model Create a model with the specified name.   
         db:scan:model Scan models from selected databases.   
         db:migration Create a model with the specified name. 
@@ -38,3 +39,23 @@ Database
         --name Name files Not applied.
         --add Name module.
 ```
+
+Create a configuration file for the database with the following content:
+
+```ts
+import { TConfigCuby } from "cuby-orm";
+
+export const configDatabase: TConfigCuby = {
+    type: 'mysql',
+    connection: {
+        connectionLimit: 103,
+        host: 'localhost',
+        user: 'root',
+        password: '',
+        database: 'testing',
+        charset: 'utf8mb4'
+    }
+}
+```
+
+Name it `cuby.config.ts`

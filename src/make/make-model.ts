@@ -56,7 +56,7 @@ export default class MakeModel extends Mixin(Common) {
                 }
             ],
             imports: [
-                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../core/mysql/models/model' : this.namePackage, namedImports: [{ name: ' Model ' }] },
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../core/mysql/models/model' : 'cuby-orm', namedImports: [{ name: ' Model ' }] },
             ],
             interfaces: [
                 {

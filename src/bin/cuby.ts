@@ -112,7 +112,8 @@ ${ansiColors.yellowBright('Database')}
                     await this.seederCreate(this.input.slice(1));
                 }
                 else if (params == 'db:scan:model') {
-                    await this.scanModel();
+                    if (this.validateQuantityArguments(this.input, 0))
+                        await this.scanModel();
                 }
                 else if (params == 'db:migration') {
                     console.log(ansiColors.yellowBright('no implementation'));
