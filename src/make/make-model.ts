@@ -6,13 +6,16 @@ import { createFile, InterfacePropertyStructure } from "ts-code-generator";
 import { Common } from "./common";
 import ansiColors from "ansi-colors";
 import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
+import { Mixin } from 'ts-mixer';
 
 const { name }: { name: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), './package.json'), 'utf8'));
 
 
-export default class MakeModel extends Common {
+export default class MakeModel extends Mixin(Common) {
     protected fileNameModel: string;
+    protected fileNameSeed: string;
     protected pathModel: string;
+    protected pathSeed: string;
     protected folderDatabaseModel: string[] = [];
     protected originalPathModel: string = '';
     protected scanScheme = new scanSchemeMysql();
@@ -23,11 +26,13 @@ export default class MakeModel extends Common {
     private isScan: boolean = false;
     public namePackage = name;
 
-    constructor(params: { fileNameModel: string, pathModel: string }) {
+    constructor({ fileNameModel, pathModel, pathSeed, fileNameSeed }: { fileNameModel: string, pathModel: string, pathSeed: string, fileNameSeed: string }) {
         super();
-        this.fileNameModel = params.fileNameModel;
-        this.pathModel = params.pathModel;
+        this.fileNameModel = fileNameModel;
+        this.pathModel = pathModel;
         this.originalPathModel = this.pathModel;
+        this.pathSeed = pathSeed;
+        this.fileNameSeed = fileNameSeed;
     }
 
     protected async createModel(nameClass: string, inputModel: string) {
@@ -51,7 +56,7 @@ export default class MakeModel extends Common {
                 }
             ],
             imports: [
-                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../core/mysql/models/model' : this.namePackage, namedImports: [{ name: ' Model ' }] },
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../core/mysql/models/model' : this.namePackage, namedImports: [{ name: ' Model ' }] },
             ],
             interfaces: [
                 {
@@ -66,8 +71,7 @@ export default class MakeModel extends Common {
 
         if (this.folderDatabaseModel.length !== 0) {
             this.pathModel = this.originalPathModel;
-            if (this.folderModel !== await this.scanScheme
-                .getNameDatabase())
+            if (this.folderModel !== await this.scanScheme.getNameDatabase())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
 
@@ -85,6 +89,42 @@ export default class MakeModel extends Common {
         }
     }
 
+    protected async createSeeder({ nameClass, inputSeed }: { nameClass: string, inputSeed: string }) {
+        const file = createFile({
+            fileName: `${this.replaceAll(inputSeed, '-')}.${this.fileNameSeed}`,
+            classes: [
+                {
+                    name: nameClass,
+                    isExported: true,
+                    extendsTypes: [`Seeder`],
+                    methods: [
+                        {
+                            name: 'run',
+                            isAsync: true,
+                            onWriteFunctionBody: (writer) => {
+                                writer.writeLine('//Write your seeder');
+                                writer.writeLine('//Remember to put await in the call method');
+                            }
+                        }
+                    ]
+                }
+            ],
+            imports: [
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../../core/seeds/seeder' : this.namePackage, namedImports: [{ name: ' Seeder ' }] },
+            ],
+            defaultExportExpression: nameClass
+        });
+
+        if (fs.existsSync(this.pathSeed)) {
+            fs.writeFileSync(`${this.pathSeed}${file.fileName}`, file.write());
+        }
+        else {
+            let folder: any = this.pathSeed.split(path.sep);
+            folder = folder[folder.length - 2];
+            throw new Error(ansiColors.blueBright(`There is no folder '${ansiColors.redBright(folder)}' to create this file`));
+        }
+    }
+
     protected async generateScanModel(database: string) {
         this.folderModel = database;
         this.isScan = true;
@@ -95,7 +135,7 @@ export default class MakeModel extends Common {
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
-                    type: this.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
+                    type: this.scanScheme.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
                     isOptional: item2.IS_NULLABLE == 'YES' ? true :
                         item2.COLUMN_KEY == 'PRI' ? true :
                             item2.COLUMN_DEFAULT != null ? true : false,
@@ -132,21 +172,7 @@ export default class MakeModel extends Common {
         }
     }
 
-    private getType(value: string) {
-        const numberValues = [
-            'INT',
-            'TINYINT',
-            'SMALLINT',
-            'MEDIUMINT',
-            'BIGINT',
-            'DECIMAL',
-            'FLOAT',
-            'DOUBLE',
-            'DOUBLE'
-        ];
-        value = value.toUpperCase();
-        return numberValues.indexOf(value);
-    }
+
 
     private updateModelFile(filePath: string, readbleStream: Readable) {
         const originalContent = fs.createReadStream(filePath, 'utf8');

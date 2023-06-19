@@ -4,9 +4,9 @@
         "name": "model.ts"
     },
     "database": {
-        "seeders": {
-            "path": "src/database/seeders/",
-            "name": "seed.ts"
+        "seeds": {
+            "path": "src/database/seeds/",
+            "name": "seeder.ts"
         },
         "migrations": {
             "path": "src/database/migrations/",

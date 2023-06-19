@@ -81,4 +81,20 @@ export default class scanSchemeMysql extends Model<any> {
             throw new Error(error.message);
         }
     }
+
+    public getType(value: string) {
+        const numberValues = [
+            'INT',
+            'TINYINT',
+            'SMALLINT',
+            'MEDIUMINT',
+            'BIGINT',
+            'DECIMAL',
+            'FLOAT',
+            'DOUBLE',
+            'DOUBLE'
+        ];
+        value = value.toUpperCase();
+        return numberValues.indexOf(value);
+    }
 }

@@ -28,7 +28,7 @@ export abstract class Common {
     }
 
     // 
-    public addPrefix(input: string, prefix: 'Model' | 'Seed' | 'Migration') {
+    public addPrefix(input: string, prefix: 'Model' | 'Seeder' | 'Migration') {
         input = input.replace(/[-_]+(.)?/g, (match: string, char: string) => {
             if (char) {
                 return char.toUpperCase();
