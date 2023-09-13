@@ -65,7 +65,6 @@ export class BaseModel<T> {
 
     public async build(): Promise<T[] | T> {
         if (Object.keys(this.alias).length != 0) {
-            console.log(this.selectColumns);
             if (this.selectColumns.length == 0 || this.selectColumns[0] == '*') {
                 this.selectColumns = [];
                 for (const item of this.model.fields) {
@@ -82,18 +81,24 @@ export class BaseModel<T> {
             }
         }
 
+        if (this.excludeColumns.length != 0) {
+            this.selectColumns = <string[]>this.model.fields.filter(field => !this.excludeColumns.includes(<string>field))
+        }
+
         if (this.subQueries.length !== 0)
             for (const item of this.subQueries) {
                 this.selectColumns.push(item);
             }
-        let sqlQuery = `SELECT ${this.selectColumns.join(', ')} FROM ${this.__table}`;
+        let sqlQuery = `SELECT ${this.selectColumns.join(', ') || '*'} FROM ${this.__table}`;
 
         if (this.joinClauses.length > 0) {
             sqlQuery += ` ${this.joinClauses.join(' ')}`;
         }
+
         if (this.whereConditions.length > 0) {
             sqlQuery += ` WHERE ${this.whereConditions.join(' ')}`;
         }
+
         if (this.orderByColumn) {
             sqlQuery += ` ORDER BY ${this.orderByColumn} ${this.orderByDirection}`;
         }

@@ -6,6 +6,9 @@ type TTypeDate = 'DATE' | 'TIME' | 'DATETIME' | 'TIMESTAMP' | 'YEAR';
 type TTypeSpatial = 'GEOMETRY' | 'POINT' | 'LINESTRING' | 'MULTIPOLYGON' | 'MULTIPOINT' | 'MULTILINESTRING' | 'GEOMETRYCOLLECTION' | 'POLYGON';
 //#endregion
 type TCompuestSentence = 'CREATE TABLE' | 'DROP TABLE' | 'ALTER TABLE' | 'IF EXISTS' | 'IF NOT EXISTS' | 'ADD CONSTRAINT';
+type TCondition = 'AND' | 'OR';
+type TDirection = 'ASC' | 'DESC';
+type TOperatorWhere = TCondition | 'LIKE' | 'ORDER BY' | TDirection;
 
 type TSentence = 'DELETE' | 'CREATE' | 'UPDATE' | 'SELECT' | 'SHOW' | 'DROP' | 'ALTER' | 'MODIFY';
 type TDatabase = 'COLUMN' | 'TABLE' | TDatabaseAttribute;
@@ -113,5 +116,8 @@ export {
     ICollation,
     TCollation,
     TEngine,
-    TCompuestSentence
+    TCompuestSentence,
+    TCondition,
+    TOperatorWhere,
+    TDirection
 };
