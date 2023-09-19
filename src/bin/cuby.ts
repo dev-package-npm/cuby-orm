@@ -28,6 +28,7 @@ export interface ICubyConfig {
 
 const { version }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
 const { name }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), 'package.json'), 'utf8'));
+// Selecciona el nombre del archivo que se desplegará
 const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
 const { model, index_folder, database }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../', nameConfigFile), 'utf8'));
 
@@ -155,7 +156,7 @@ ${ansiColors.yellowBright('Database')}
                     console.log(`${abrevCommand || this.abrevCommand} ${params} ${ansiColors.blueBright('<model1 model2>')} separated by a space`);
                     break;
                 default:
-                    throw new Error(ansiColors.yellowBright(`The ${ansiColors.blueBright(params[0])} command has no help `));
+                    throw new Error(ansiColors.yellowBright(`The ${ansiColors.blueBright(params)} command has no help `));
                     break;
             }
         } catch (error: any) {

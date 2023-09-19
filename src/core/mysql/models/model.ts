@@ -3,7 +3,7 @@ import { PoolConnection } from 'promise-mysql';
 import { Pool } from 'pg';
 import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
-import { TCondition, TDirection } from '../interfaces/sql';
+import { TCondition, TDirection, TOperatorWhere } from '../interfaces/sql';
 //#endregion
 
 //#region Interface
@@ -14,7 +14,10 @@ interface IConstructorModel<T> {
     fields: TArrayColumns<T>
 }
 
-interface IReturnCreate {
+/**
+ * En: Used to return when a record is inserted, updated or deleted
+ */
+interface IReturn {
     fieldCount?: number,
     affectedRows?: number,
     insertId?: number,
@@ -25,15 +28,6 @@ interface IReturnCreate {
     changedRows?: number
 }
 
-interface IReturnUpdate extends IReturnCreate { };
-interface IReturnDelete extends IReturnCreate { };
-
-// type TWhereUpdate<T> = T | {
-//     operator: TCondition;
-//     values: T;
-// };
-
-// const wheere: TWhereUpdate<{ name: string, age: number }> = { operator: 'AND', };
 
 type TQuerySelectParams<T, K extends keyof T, L extends K, R extends K, S extends string, A extends string> = {
     where?: Partial<T>;
@@ -89,11 +83,14 @@ type TColumn<K> = K[] | '*'
 
 export type TAlias<T> = { column: keyof T extends string ? keyof T : never, name: string };
 export type TAlias2<T, S> = { column: T extends string ? T : never, name: S };
+type TAlias3<T, R extends keyof T, S extends string> = { [B in R]: S };
 
 // extends infer K ? K extends string ? K : never : never
 type TArrayColumns<T> = Array<Required<keyof T>>;
 //#endregion
+
 const database = new Database();
+
 export abstract class Model<T> {
     private _table: string = '';
     private _primaryKey: keyof T | '' = '';
@@ -170,7 +167,7 @@ export abstract class Model<T> {
      * @param data 
      * @returns 
      */
-    public async create<C extends keyof T>(data: { columns: C[]; values: Required<Pick<T, C>> | Required<Pick<T, C>>[] }): Promise<IReturnCreate> {
+    public async create<C extends keyof T>(data: { columns: C[]; values: Required<Pick<T, C>> | Required<Pick<T, C>>[] }): Promise<IReturn> {
         const sqlQuery: string = this.fillSqlQueryToInsert(data);
         return await this.query(sqlQuery);
     }
@@ -189,39 +186,57 @@ export abstract class Model<T> {
         return this._baseModel;
     }
 
-
     /**
      * @overload
-     * @param { { columns: C[], id: number } } params 
      * @example 
      * findId(2);
+     * findId(alias:{ create_at: 'date' });
      * findId({ columns: ['first_name', 'age'], id: 2 });
+     * findId({ columns: ['first_name', 'age'], alias:{ first_name: 'name' }, id: 2 });
      * findId({ excludeColumns: ['id', 'create_at'], id: 2 });
-     * @returns { Promise<Pick<T, C>> }
+     * findId({ excludeColumns: ['id', 'create_at'], alias:{ create_at: 'date' }, id: 2 });
+     * @param params 
      */
+    public async findId<C extends keyof T, A extends C, S extends string>(params: { columns: C[], alias: TAlias3<T, A, S>, id: number }): Promise<Pick<T, Exclude<C, A>> & Partial<Record<S, T[A]>>>
+    public async findId<C extends keyof T, A extends Exclude<keyof T, C>, S extends string>(params: { excludeColumns: C[], alias: TAlias3<T, A, S>, id: number }): Promise<Pick<T, Exclude<keyof T, C | A>> & Record<S, T[A]>>
+    public async findId<C extends keyof T, S extends string>(params: { alias: TAlias3<T, C, S>, id: number }): Promise<Pick<T, Exclude<keyof T, C>> & Record<S, T[C]>>
     public async findId<C extends keyof T>(params: { columns: C[], id: number }): Promise<Pick<T, C>>
     public async findId<C extends keyof T>(params: { excludeColumns: C[], id: number }): Promise<Pick<T, Exclude<keyof T, C>>>
     public async findId(params: Number): Promise<T>
     public async findId(params: any): Promise<any> {
         if (typeof params == 'number')
-            return (await this.select({ where: <T>{ id: params } }))[0];
+            return (await this.query(`SELECT * FROM ${this.table}`))[0];
         let sqlQuery = `SELECT `;
-        const { columns, id, excludeColumns }: { columns: any[], id: number, excludeColumns: any[] } = params;
-        if (columns != undefined && id != undefined)
-            sqlQuery += `${columns} \nFROM ${this._table} \nWHERE id = "${id}"`;
+        let { columns, id, excludeColumns, alias }: { columns: any[], id: number, excludeColumns: any[], alias: any } = params;
+        if (columns == undefined && excludeColumns == undefined && id != undefined)
+            columns = this._fields;
+        if (columns != undefined && id != undefined) {
+            if (alias != undefined)
+                for (const item of Object.keys(alias)) {
+                    const index = columns.findIndex(column => column == item);
+                    if (index != -1)
+                        columns.splice(index, 1, `${item} AS "${alias[item]}"`);
+                }
+            sqlQuery += `${columns} \nFROM ${this.table} \nWHERE id = "${id}"`;
+        }
         else if (excludeColumns != undefined && id != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this._table} \nWHERE id = "${id}"`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this.table} \nWHERE id = "${id}"`;
         else throw new Error("Parameters cannot be empty");
         return (await this.query(sqlQuery))[0];
     }
+
     /**
      * @overload
-     * @param { { columns: C[], id: number } } params 
-     * @example 
+     * @example
      * findAll({ columns: ['first_name', 'age']});
+     * findAll({ columns: ['first_name', 'age'], alias:{ first_name: 'name' }});
+     * findAll({ excludeColumns: ['id', 'create_at'], alias:{ first_name: 'name' }});
      * findAll({ excludeColumns: ['id', 'create_at']});
-     * @returns { Promise<any[]>}
+     * @param params 
      */
+    public async findAll<C extends keyof T, A extends C, S extends string>(params: { columns: C[], alias: TAlias3<T, A, S> }): Promise<(Pick<T, Exclude<C, A>> & Partial<Record<S, T[A]>>)[]>
+    public async findAll<C extends keyof T, S extends string>(params: { alias: TAlias3<T, C, S> }): Promise<(Pick<T, Exclude<keyof T, C>> & Record<S, T[C]>)[]>
+    public async findAll<C extends keyof T, A extends Exclude<keyof T, C>, S extends string>(params: { excludeColumns: C[], alias: TAlias3<T, A, S> }): Promise<(Pick<T, Exclude<keyof T, C | A>> & Record<S, T[A]>)[]>
     public async findAll<C extends keyof T>(params: { columns: C[] }): Promise<Pick<T, C>[]>
     public async findAll<C extends keyof T>(params: { excludeColumns: C[] }): Promise<Pick<T, Exclude<keyof T, C>>[]>
     public async findAll(params?: never): Promise<T[]>
@@ -232,9 +247,18 @@ export abstract class Model<T> {
             return await this.query(sqlQuery);
         }
 
-        const { columns, excludeColumns }: { columns: any[], excludeColumns: any[] } = params;
-        if (columns != undefined)
+        let { columns, excludeColumns, alias }: { columns: any[], excludeColumns: any[], alias: any } = params;
+        if (columns == undefined && excludeColumns == undefined && alias != undefined)
+            columns = this._fields;
+        if (columns != undefined) {
+            if (alias != undefined)
+                for (const item of Object.keys(alias)) {
+                    const index = columns.findIndex(column => column == item);
+                    if (index != -1)
+                        columns.splice(index, 1, `${item} AS "${alias[item]}"`);
+                }
             sqlQuery += `${columns} \nFROM ${this._table}`;
+        }
         else if (excludeColumns != undefined)
             sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this._table}`;
         else throw new Error("Parameters cannot be empty");
@@ -242,67 +266,28 @@ export abstract class Model<T> {
     }
 
     /**
-     * @param { TQuerySelect<T, K, L, R, S, A> } params
-     * @example 
-     * select( { columns: ['id', 'name'], alias: { name: 'Name' },  where: { id:1 } )
-     * select( { alias: { name: 'Name' }, excludeColumns:['id']  where: { id:1 } )
-     * select( { orderBy:{ columns: 'create_time', direction: 'ASC' }, alias: { name:'Name' } } )
-     * @returns { T[] }
-     */
-    public async select(): Promise<T[]>;
-
-    public async select<K extends keyof T, L extends keyof T>(params: Required<Pick<TQuerySelect<T, K, L>, 'excludeColumns' | 'subQuery' | 'where'>> | Required<Pick<TQuerySelect<T, K, L>, 'excludeColumns' | 'subQuery' | 'where' | 'orderBy'>>): Promise<T[] | Pick<T, Exclude<K, L>>[]>;
-    public async select<K extends keyof T, L extends keyof T>(params: Required<Pick<TQuerySelect<T, K, L>, 'excludeColumns' | 'where'>> | Required<Pick<TQuerySelect<T, K, L>, 'excludeColumns' | 'where' | 'orderBy'>>): Promise<T[] | Pick<T, Exclude<K, L>>[]>;
-    public async select<K extends keyof T, L extends keyof T, R extends keyof T, S extends string>(params: Required<Pick<TQuerySelect<T, K, L, R, S, any>, 'excludeColumns' | 'subQuery' | 'alias' | 'where'>> | Required<Pick<TQuerySelect<T, K, L, R, S, any>, 'excludeColumns' | 'subQuery' | 'alias' | 'where' | 'orderBy'>>): Promise<(Omit<Pick<T, Exclude<K, L>>, R> & Record<S, any>)[]>;
-
-
-    public async select<K extends keyof T, A extends string>(params: Required<Pick<TQuerySelect<T, K, any, any, any, A>, 'columns' | 'subQuery' | 'where'>> | Required<Pick<TQuerySelect<T, K, any, any, any, A>, 'columns' | 'subQuery' | 'where' | 'orderBy'>>): Promise<(Pick<T, K> & Record<A, any>)[]>;
-    public async select<K extends keyof T, R extends keyof T, S extends string, A extends string>(params: Required<Pick<TQuerySelect<T, K, any, R, S, A>, 'columns' | 'alias' | 'subQuery' | 'where'>> | Required<Pick<TQuerySelect<T, K, any, R, S, A>, 'columns' | 'alias' | 'subQuery' | 'where' | 'orderBy'>>): Promise<(Omit<Pick<T, K>, R> & Record<S | A, any>)[]>;
-    public async select<K extends keyof T, R extends keyof T, S extends string>(params: Required<Pick<TQuerySelect<T, K, any, R, S>, 'columns' | 'alias' | 'where'>> | Required<Pick<TQuerySelect<T, K, any, R, S>, 'columns' | 'alias' | 'where' | 'orderBy'>>): Promise<(Omit<Pick<T, K>, R> & Record<S, any>)[]>;
-    public async select<K extends keyof T>(params: Required<Pick<TQuerySelect<T, K>, 'columns'>> | Required<Pick<TQuerySelect<T, K>, 'columns' | 'orderBy'>> | Required<Pick<TQuerySelect<T, K>, 'columns' | 'where'>> | Required<Pick<TQuerySelect<T, K>, 'columns' | 'where' | 'orderBy'>>): Promise<Pick<T, K>[]>;
-
-    public async select<R extends keyof T, S extends string, A extends string>(params: Required<Pick<TQuerySelect<T, any, any, R, S, A>, 'alias' | 'subQuery' | 'where'>> | Required<Pick<TQuerySelect<T, any, any, R, S, A>, 'alias' | 'subQuery' | 'where' | 'orderBy'>>): Promise<(Omit<T, R> & Record<S | A, any>)[]>;
-
-    public async select<A extends string>(params: Required<Pick<TQuerySelect<T, any, any, any, any, A>, 'subQuery' | 'where'>> | Required<Pick<TQuerySelect<T, any, any, any, any, A>, 'subQuery' | 'where' | 'orderBy'>>): Promise<(T & Record<A, any>)[]>;
-    public async select<R extends keyof T, S extends string>(params: Required<Pick<TQuerySelect<T, any, any, R, S>, 'alias' | 'where'>> | Required<Pick<TQuerySelect<T, any, any, R, S>, 'alias' | 'where' | 'orderBy'>>): Promise<(Omit<T, R> & Record<S, any>)[]>;
-    public async select(params: Pick<TQuerySelect<T, any, any, any, any, any>, 'where' | 'orderBy'>): Promise<T[]>;
-    public async select(params: Pick<TQuerySelect<T, any, any, any, any, any>, 'where'>): Promise<T[]>;
-
-    public async select<K extends keyof T, L extends K, R extends K, S extends string, A extends string>(params?: TQuerySelect<T, K, L, R, S, A>): Promise<any> {
-        if (params === undefined)
-            this._baseModel.selectColumns = ['*']
-        else if (params.excludeColumns !== undefined) this._baseModel.excludeColumns = <string[]>params.excludeColumns;
-        if (params?.alias != undefined)
-            this._baseModel.alias = params.alias;
-
-        if (params?.columns != undefined)
-            if (Array.isArray(params?.columns) || typeof params?.columns === 'string')
-                this._baseModel.selectColumns = typeof params?.columns === 'string' ? [params.columns] : <string[]>params?.columns;
-
-        if (params?.where != undefined)
-            this._baseModel.where(params.where);
-
-        if (params?.orderBy != undefined)
-            this._baseModel.orderBy(params.orderBy)
-
-        if (params?.subQuery != undefined)
-            this._baseModel.subQuery(params.subQuery);
-        return this._baseModel.build();
-    }
-
-    /**
      * 
-     * @param param0 
+     * @param param
      * @example
      * 
      * @returns 
      */
-    public async update({ set, where }: { set: Partial<T>, where: Partial<T> }): Promise<IReturnUpdate> {
+    public async update(param: { set: Partial<T>, where: { condition: Partial<T>, operator: TCondition } }): Promise<IReturn> {
+        const { set, where } = param;
         const sqlQuery: string = this.fillSqlQueryToUpdate(set, where);
         return await this.query(sqlQuery);
     }
-
-    public async delete(where: Partial<T>): Promise<IReturnDelete> {
+    /**
+     * @example
+     * delete(8);
+     * delete({ condition: { id: 8 } });
+     * delete({ condition: { id: 8, age: 24 }, operator: 'OR' });
+     * @param where 
+     * @returns 
+     */
+    public async delete(where: number): Promise<IReturn>
+    public async delete(where: { condition: Partial<T>, operator?: TCondition }): Promise<IReturn>
+    public async delete(where: any): Promise<IReturn> {
         const sqlQuery: string = this.fillSqlQueryToDelete(where);
         return await this.query(sqlQuery);
     }
@@ -329,17 +314,17 @@ export abstract class Model<T> {
         }
     }
 
-    private fillSqlQueryToUpdate(data: any, where: any): string {
-        if (Object.entries(data).length == 0 || Object.entries(where).length == 0) throw new Error("Parameters cannot be empty");
+    private fillSqlQueryToUpdate(data: any, where: { condition: any, operator: TCondition }): string {
+        if (Object.entries(data).length == 0 || Object.entries(where.condition).length == 0) throw new Error("Parameters cannot be empty");
 
-        let sqlQuery = `UPDATE ${this._table}\nSET ${Object.keys(data).map(key => `${key} = "${data[key]}"`)}\nWHERE ${Object.keys(where).map(key => `${key} = "${where[key]}"`).join('\nAND ')}`;
-        console.log(sqlQuery);
+        let sqlQuery = `UPDATE ${this._table}\nSET ${Object.keys(data).map(key => `${key} = "${data[key]}"`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = "${where.condition[key]}"`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
     }
 
-    private fillSqlQueryToDelete(where: any): string {
-        if (Object.entries(where).length == 0) throw new Error("Parameters cannot be empty");
-        let sqlQuery: string = `DELETE FROM ${this._table}\nWHERE ${Object.keys(where).map(key => `${key} = "${where[key]}"`).join('\nAND ')}`;
+    private fillSqlQueryToDelete(where: { condition: any, operator?: TCondition } | number): string {
+        if (typeof where != 'number' && Object.entries(where.condition).length == 0)
+            throw new Error("Parameters cannot be empty");
+        let sqlQuery: string = `DELETE FROM ${this.table}\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = "${where}"` : Object.keys(where.condition).map(key => `${key} = "${where.condition[key]}"`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
     }
 

@@ -1,4 +1,4 @@
-import { Model } from "./model";
+import { Model, TAlias } from "./model";
 
 export type TSubQuery<A extends string> = string | {
     select: string;
@@ -63,7 +63,7 @@ export class BaseModel<T> {
         return this;
     }
 
-    public async build(): Promise<T[] | T> {
+    public async build(): Promise<T[]> {
         if (Object.keys(this.alias).length != 0) {
             if (this.selectColumns.length == 0 || this.selectColumns[0] == '*') {
                 this.selectColumns = [];
@@ -73,10 +73,17 @@ export class BaseModel<T> {
                         this.selectColumns.push(<string>item);
                 }
             }
-            for (const item of Object.keys(this.alias)) {
-                const index = this.selectColumns.findIndex(column => column === item);
+            if (Array.isArray(this.alias))
+                for (const item of this.alias) {
+                    const index = this.selectColumns.findIndex(column => column === item.column);
+                    if (index != -1) {
+                        this.selectColumns.splice(index, 1, `${item.column} AS ${item.name}`);
+                    }
+                }
+            else {
+                const index = this.selectColumns.findIndex(column => column === this.alias.column);
                 if (index != -1) {
-                    this.selectColumns.splice(index, 1, `${item} AS ${this.alias[item]}`);
+                    this.selectColumns.splice(index, 1, `${this.alias.column} AS ${this.alias.name}`);
                 }
             }
         }
@@ -89,7 +96,7 @@ export class BaseModel<T> {
             for (const item of this.subQueries) {
                 this.selectColumns.push(item);
             }
-        let sqlQuery = `SELECT ${this.selectColumns.join(', ') || '*'} FROM ${this.__table}`;
+        let sqlQuery = `SELECT ${this.selectColumns || '*'} FROM ${this.__table}`;
 
         if (this.joinClauses.length > 0) {
             sqlQuery += ` ${this.joinClauses.join(' ')}`;
