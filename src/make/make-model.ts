@@ -71,7 +71,7 @@ export default class MakeModel extends Mixin(Common) {
 
         if (this.folderDatabaseModel.length !== 0) {
             this.pathModel = this.originalPathModel;
-            if (this.folderModel !== await this.scanScheme.getNameDatabase())
+            if (this.folderModel !== await this.scanScheme.getDatabaseName())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
 
@@ -164,7 +164,7 @@ export default class MakeModel extends Mixin(Common) {
         if (this.folderDatabaseModel.length !== 0) {
             this.folderDatabaseModel.forEach(async folder => {
                 if (!fs.existsSync(path.join(this.pathModel, folder))) {
-                    const nameDatabase = await this.scanScheme.getNameDatabase();
+                    const nameDatabase = await this.scanScheme.getDatabaseName();
                     if (folder !== nameDatabase)
                         fs.mkdirSync(path.join(this.pathModel, folder), { recursive: true });
                 }

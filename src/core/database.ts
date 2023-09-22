@@ -28,8 +28,9 @@ type TConfigPool = PoolConfig | PoolConfigPg;
 
 
 export class Database {
-    protected config!: TConfigPool;
+    private configPool!: TConfigPool;
     public type!: TConfigCuby['type'];
+    public databaseName!: string;
 
     private rootDir: string = path.resolve();
 
@@ -41,11 +42,11 @@ export class Database {
         try {
             switch (params !== undefined ? params.type : this.type) {
                 case 'mysql':
-                    const pool = await mysql.createPool(params !== undefined ? params.connection as mysql.PoolConfig : this.config as mysql.PoolConfig);
+                    const pool = await mysql.createPool(params !== undefined ? params.connection as mysql.PoolConfig : this.configPool as mysql.PoolConfig);
                     return <T>await pool.getConnection();
                     break;
                 case 'postgresql':
-                    return <T>new Pool(params !== undefined ? params.connection as PoolConfigPg : this.config as PoolConfigPg);
+                    return <T>new Pool(params !== undefined ? params.connection as PoolConfigPg : this.configPool as PoolConfigPg);
                     break;
             }
         } catch (error: any) {
@@ -56,7 +57,7 @@ export class Database {
     public async getConfigDatabase<T extends TConfigType>(): Promise<T extends 'mysql' ? PoolConfig : PoolConfigPg>
     public async getConfigDatabase<T extends TConfigType>(): Promise<T extends 'postgresql' ? PoolConfigPg : never>
     public async getConfigDatabase(): Promise<any> {
-        return this.config;
+        return this.configPool;
     }
 
     private setValue(params: Omit<TConfigCuby, 'environments'>) {
@@ -64,16 +65,18 @@ export class Database {
         switch (type) {
             case 'mysql':
                 this.type = 'mysql';
-                this.config = connection;
+                this.databaseName = connection.database || '';
+                this.configPool = connection;
                 break;
             case 'postgresql':
                 this.type = 'postgresql';
-                this.config = connection;
+                this.databaseName = connection.database || '';
+                this.configPool = connection;
                 break;
         }
     }
 
-    public async initialize() {
+    public async initialize(): Promise<Database> {
         loadEnvFile();
 
         const env: string = process.env.NODE_ENV as string;
@@ -85,6 +88,7 @@ export class Database {
             this.setValue(this._config?.environments[env]);
         } else
             this.setValue(this._config);
+        return this;
     }
 
     private async getConfigDatabaseForFile(): Promise<TConfigCuby> {

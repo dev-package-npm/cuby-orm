@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
 import { TCondition, TDirection, TOperatorWhere } from '../interfaces/sql';
+import { IModelMysql } from '../interfaces/mysql.model';
 //#endregion
 
 //#region Interface
@@ -91,13 +92,16 @@ type TArrayColumns<T> = Array<Required<keyof T>>;
 
 const database = new Database();
 
-export abstract class Model<T> {
+export abstract class Model<T> implements IModelMysql<T> {
     private _table: string = '';
     private _primaryKey: keyof T | '' = '';
     private _baseModel: BaseModel<T>;
 
-    protected _fields: TArrayColumns<T> = [];
-    protected database: Database;
+    private _fields: TArrayColumns<T> = [];
+    private database: Promise<Database> = database.initialize();
+    private connection?: PoolConnection | Pool;
+
+    private executeDestroy: boolean = false;
 
     constructor(params?: IConstructorModel<T>) {
         if (params != undefined) {
@@ -106,18 +110,10 @@ export abstract class Model<T> {
             this._primaryKey = primaryKey;
             this._fields = fields;
         }
-        this.database = database;
-        this._baseModel = new BaseModel<T>(this._table, this);
+        this._baseModel = new BaseModel<T>(this.table, this);
     }
 
     //#region  Setter  and getter
-    set table(table: string) {
-        this._table = table;
-    }
-
-    set primaryKey(primaryKey: keyof T | '') {
-        this._primaryKey = primaryKey;
-    }
 
     get fields() {
         return this._fields;
@@ -132,25 +128,62 @@ export abstract class Model<T> {
     }
     //#endregion
 
+    public async getDatabaseName() {
+        return (await this.database).databaseName;
+    }
+
+    public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }> {
+        if (!this.connection)
+            this.connection = await database.getConnection() as PoolConnection;
+
+        if (((await this.database).type == 'mysql') && this.connection)
+            await (this.connection as PoolConnection).beginTransaction();
+        return {
+            commit: async () => {
+                if (((await this.database).type == 'mysql') && this.connection) {
+                    await (this.connection as PoolConnection).commit();
+                    (this.connection as PoolConnection).release();
+                    (this.connection as PoolConnection).destroy();
+                }
+            },
+            rollback: async () => {
+                if (((await this.database).type == 'mysql') && this.connection) {
+                    await (this.connection as PoolConnection).rollback();
+                    (this.connection as PoolConnection).release();
+                    (this.connection as PoolConnection).destroy();
+                }
+            }
+        };
+    }
+
     public async query(sentence: string, values?: any): Promise<any> {
         try {
             let results;
-            await this.database.initialize();
-            switch (this.database.type) {
+            let database = await this.database;
+            switch (database.type) {
                 case 'mysql':
-                    const connected = await this.database.getConnection() as PoolConnection;
-                    results = await connected.query(sentence, values);
-                    connected.release();
-                    connected.destroy();
-                    return results;
+                    if (!this.connection) {
+                        this.executeDestroy = true;
+                        this.connection = await database.getConnection() as PoolConnection;
+                        results = await this.connection.query(sentence, values);
+                        this.connection.release();
+                        this.connection.destroy();
+                        this.connection = undefined;
+                        return results;
+                    }
+                    return await (this.connection as PoolConnection).query(sentence, values);
                     break;
                 case 'postgresql':
-                    const pool = await this.database.getConnection() as Pool;
+                    const pool = await database.getConnection() as Pool;
                     results = await pool.query(sentence, values);
                     return results.rows;
                     break;
             }
         } catch (error: any) {
+            if (this.executeDestroy) {
+                (this.connection as PoolConnection).release();
+                (this.connection as PoolConnection).destroy();
+            }
             throw new Error(error.message);
         }
     }

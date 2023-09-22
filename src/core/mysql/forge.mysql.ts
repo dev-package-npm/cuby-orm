@@ -6,7 +6,7 @@ import { TCompuestSentence } from "./interfaces/sql";
 const database = new Database();
 
 export class Forge<T> extends Database {
-    private fields: string[] = [];
+    private _fields: string[] = [];
     private tableFields: string[] = [];
     private sqlQuery: string = '';
     protected database: Database;
@@ -99,10 +99,10 @@ export class Forge<T> extends Database {
     protected addField(fields: TColumns<T>) {
         // console.log(Object.keys(fields));
         for (const item of Object.keys(fields)) {
-            this.fields.push(this.orderFields(<any>item, fields));
+            this._fields.push(this.orderFields(<any>item, fields));
         }
         if (this.sqlStr != '') {
-            this.fields.push(this.sqlStr);
+            this._fields.push(this.sqlStr);
             this.sqlStr = '';
         }
     }
@@ -114,7 +114,7 @@ export class Forge<T> extends Database {
             }
         }
         this.sqlQuery = `${this.createTableStr} \`${name}\` (
-            ${this.fields.join(',\n')}
+            ${this._fields.join(',\n')}
             )${this.tableFields.length > 0 ? this.tableFields.join('\n') : ''};`;
         this.tableFields = [];
         // Add alter table if exists instruction
@@ -133,7 +133,7 @@ export class Forge<T> extends Database {
             }
         }
         this.sqlQuery = `${this.createTableStr} ${this.ifNotExistsStr} \`${name}\` (
-            ${this.fields.join(',\n')}
+            ${this._fields.join(',\n')}
             )${this.tableFields.length > 0 ? this.tableFields.join('\n') : ''};`;
         this.tableFields = [];
         if (this.sqlStr != '') {

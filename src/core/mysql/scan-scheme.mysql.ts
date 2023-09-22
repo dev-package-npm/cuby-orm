@@ -41,7 +41,7 @@ export default class scanSchemeMysql extends Model<any> {
             this.sqlQuery = `
         SELECT table_name AS \`table\`
         FROM information_schema.tables
-        WHERE TABLE_SCHEMA = '${database || await this.getNameDatabase()}'
+        WHERE TABLE_SCHEMA = '${database || await this.getDatabaseName()}'
         `;
             return await this.query(this.sqlQuery);
         } catch (error: any) {
@@ -68,17 +68,6 @@ export default class scanSchemeMysql extends Model<any> {
             return Array.isArray(database) ? database.map((value) => value.Database) : [];
         } catch (error: any) {
             throw new Error(ansiColors.redBright(error.message));
-        }
-    }
-
-    public async getNameDatabase(): Promise<string> {
-        try {
-            await this.database.initialize();
-            if (this.database.type == 'mysql')
-                return (await this.database.getConfigDatabase<'mysql'>()).database || '';
-            else return (await this.database.getConfigDatabase<'postgresql'>()).database || ''
-        } catch (error: any) {
-            throw new Error(error.message);
         }
     }
 
