@@ -102,8 +102,14 @@ export default class MakeModel extends Mixin(Common) {
                             name: 'run',
                             isAsync: true,
                             onWriteFunctionBody: (writer) => {
-                                writer.writeLine('//Write your seeder');
-                                writer.writeLine('//Remember to put await in the call method');
+                                writer.write('try').block(() => {
+                                    writer.writeLine("//Write your seeder")
+                                        .writeLine("//Remember to put await in the call method")
+                                        .writeLine("console.log(\"Testing seeder\");");
+                                }).write("catch (error: any)")
+                                    .block(() => {
+                                        writer.writeLine('throw new Error(error.message);');
+                                    });
                             }
                         }
                     ]

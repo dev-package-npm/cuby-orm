@@ -49,11 +49,12 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan(this.abrevCommand + ' <flags> <options> ')}More information
     
     COMMAND LINE FLAGS
+        ${ansiColors.cyan('db:create ')}Create a new database schema.
         ${ansiColors.cyan('db:seed ')}Run seed specified by name or list of names.
         ${ansiColors.cyan('db:seed:create ')}Create file seed.
         ${ansiColors.cyan('db:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
-        ${ansiColors.cyan('db:migration ')}Create a model with the specified name.
+        ${ansiColors.cyan('db:migration ')}Create a migration file with the given name.
         ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
         ${ansiColors.cyan('db:config:list')}List all config.
 
@@ -309,7 +310,6 @@ ${ansiColors.yellowBright('Database')}
                                 console.log(ansiColors.redBright("Unsupported characters: " + item));
                                 continue;
                             }
-
 
                             await this.executeAction(item, 'seed:create');
                         }

@@ -305,7 +305,7 @@ export abstract class Model<T> implements IModelMysql<T> {
      * 
      * @returns 
      */
-    public async update(param: { set: Partial<T>, where: { condition: Partial<T>, operator: TCondition } }): Promise<IReturn> {
+    public async update(param: { set: Partial<T>, where: { condition: Partial<T>, operator?: TCondition } }): Promise<IReturn> {
         const { set, where } = param;
         const sqlQuery: string = this.fillSqlQueryToUpdate(set, where);
         return await this.query(sqlQuery);
@@ -347,7 +347,7 @@ export abstract class Model<T> implements IModelMysql<T> {
         }
     }
 
-    private fillSqlQueryToUpdate(data: any, where: { condition: any, operator: TCondition }): string {
+    private fillSqlQueryToUpdate(data: any, where: { condition: any, operator?: TCondition }): string {
         if (Object.entries(data).length == 0 || Object.entries(where.condition).length == 0) throw new Error("Parameters cannot be empty");
 
         let sqlQuery = `UPDATE ${this._table}\nSET ${Object.keys(data).map(key => `${key} = "${data[key]}"`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = "${where.condition[key]}"`).join(`\n${where.operator || 'AND'} `)}`;

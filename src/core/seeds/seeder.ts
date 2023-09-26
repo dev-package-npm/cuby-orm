@@ -1,14 +1,15 @@
-import { Model } from "../mysql/models/model";
 import path from 'node:path';
 import fs from 'node:fs';
 import { ICubyConfig } from "../../bin/cuby";
 import ansiColors from "ansi-colors";
+import { Model } from '../mysql/models/model';
 const { name }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), 'package.json'), 'utf8'));
 const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
 const { database: databaseFolder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../', nameConfigFile), 'utf8'));
 const seederPath = path.join(name != 'cuby-orm' ? path.resolve() : __dirname, name != 'cuby-orm' ? databaseFolder.seeds.path : '../../testing/database/seeds');
 
-export class Seeder extends Model<any> {
+
+export class Seeder {
     public seederPath = seederPath;
     static filesSeed: string[] = [];
 
@@ -28,12 +29,17 @@ export class Seeder extends Model<any> {
         }
     }
 
-
     public async getFileSeeder(): Promise<string[]> {
         const seeder = fs.readdirSync(seederPath);
         return seeder.filter(fileSeed => this.chackInTs(fileSeed)).map(fileSeed => fileSeed.replace('.js', ''));
     }
 
+    /**
+     * Toma el valor pasado por fileNameSeed y le agreaga .js o seeder si no vienen incluidos, para poder construir el nombre del seeder correcto.
+     * Adicionalmente valida si se está llamando múltiples veces un seeder. 
+     * Por último ejecuta el seeder
+     * @param param0 
+     */
     private async normalize({ fileNameSeed }: { fileNameSeed: string }) {
         if (path.extname(fileNameSeed) == '.ts') {
             fileNameSeed = fileNameSeed.replace('.ts', '.js');

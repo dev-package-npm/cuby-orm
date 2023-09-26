@@ -8,7 +8,6 @@
         "christian-kohler.path-intellisense",
         "mhutchie.git-graph",
         "irongeek.vscode-env",
-        "adpyke.codesnap",
-        "kevinkyang.auto-comment-blocks"
+        "adpyke.codesnap"
     ]
 }
