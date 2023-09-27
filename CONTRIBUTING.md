@@ -7,6 +7,8 @@
 
 * [Comandos importantes](#Comandos importantes)
 
+Token `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`
+
 Clonar el repositorio desde la rama development.
 
 ```
@@ -40,8 +42,5 @@ Comando para empaquetar desarrollo para probarlo.
 ```bash
 npm pack
 ```
-
-
-
 
 ## Quick start
