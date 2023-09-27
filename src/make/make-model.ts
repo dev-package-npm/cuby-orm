@@ -7,9 +7,7 @@ import { Common } from "./common";
 import ansiColors from "ansi-colors";
 import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
 import { Mixin } from 'ts-mixer';
-
-const { name }: { name: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), './package.json'), 'utf8'));
-
+import { packageName } from '../core/common';
 
 export default class MakeModel extends Mixin(Common) {
     protected fileNameModel: string;
@@ -24,7 +22,7 @@ export default class MakeModel extends Mixin(Common) {
     private primariKey: string = '';
     private folderModel: string = '';
     private isScan: boolean = false;
-    public namePackage = name;
+    public namePackage = packageName;
 
     constructor({ fileNameModel, pathModel, pathSeed, fileNameSeed }: { fileNameModel: string, pathModel: string, pathSeed: string, fileNameSeed: string }) {
         super();

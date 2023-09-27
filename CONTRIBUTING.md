@@ -29,13 +29,19 @@ comando para ver lo que se publicaría en npm
 npm publish --dry-run
 ```
 
-
-
 Comando para publicar el paquete npm.
 
 ```bash
 npm publish cuby-orm
 ```
+
+Comando para empaquetar desarrollo para probarlo.
+
+```bash
+npm pack
+```
+
+
 
 
 ## Quick start

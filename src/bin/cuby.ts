@@ -5,6 +5,7 @@ import path from 'node:path';
 import MakeModel from '../make/make-model';
 import { Mixin } from 'ts-mixer';
 import { Seeder } from '../core/seeds/seeder';
+import { packageName } from '../core/common';
 
 //#region  Interfaces
 export interface ICubyConfig {
@@ -27,10 +28,10 @@ export interface ICubyConfig {
 //#endregion
 
 const { version }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
-const { name }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), 'package.json'), 'utf8'));
 // Selecciona el nombre del archivo que se desplegará
-const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
-const { model, index_folder, database }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../', nameConfigFile), 'utf8'));
+const nameConfigFile = packageName == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
+const pathPackage = path.join(__dirname, '../../', nameConfigFile);
+const { model, index_folder, database }: ICubyConfig = JSON.parse(fs.readFileSync(pathPackage, 'utf8'));
 
 const seeder = new Seeder();
 
@@ -40,7 +41,7 @@ export class Cuby extends Mixin(MakeModel) {
     private abrevCommand: string = 'cuby';
     private pathPackage = path.join(path.resolve(), '/package.json');
     private regExpEspecialCharacter: RegExp = /[!@#$%^&*()+={}\[\]|\\:;'",.<>/?]/;
-    private pathConfig: string = path.join(__dirname, '../../', nameConfigFile);
+    private pathConfig: string = pathPackage;
 
     private help: string = `
 ${ansiColors.yellowBright('Database')}

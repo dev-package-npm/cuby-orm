@@ -1,4 +1,4 @@
 node_modules
 build
 src/testing/models
-./**/*.tgz
+cuby-orm-*.tgz
