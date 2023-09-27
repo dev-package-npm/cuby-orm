@@ -84,14 +84,16 @@ export class Database {
             this._config = await this.getConfigDatabaseForFile();
         }
 
-        if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
-            this.setValue(this._config?.environments[env]);
-        } else
-            this.setValue(this._config);
+        if (this._config != undefined) {
+            if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
+                this.setValue(this._config?.environments[env]);
+            } else
+                this.setValue(this._config);
+        }
         return this;
     }
 
-    private async getConfigDatabaseForFile(): Promise<TConfigCuby> {
+    private async getConfigDatabaseForFile(): Promise<TConfigCuby | undefined> {
         try {
             const pathConfigFile = searchFileConfig(this.rootDir, 'cuby.config');
             if (pathConfigFile !== '' && pathConfigFile !== undefined) {
@@ -99,7 +101,7 @@ export class Database {
                 if (config?.configDatabase != undefined)
                     return config.configDatabase;
                 else throw new Error('configDatabase property not found');
-            } else throw new Error('Configuration file cuby.config not found');
+            }
         } catch (error: any) {
             throw new Error(error.message);
         }
