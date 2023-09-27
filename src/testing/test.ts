@@ -4,7 +4,6 @@ const database = new Database();
 
 const main = async () => {
     try {
-        await database.initialize();
         const pool = await database.getConnection<PoolConnection>();
 
         const results = await pool.query('SHOW DATABASES');

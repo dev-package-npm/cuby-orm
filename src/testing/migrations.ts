@@ -1,6 +1,7 @@
-import { TColumns } from "../../../core/mysql/interfaces/forge.interface";
-import { Migration } from "../../../core/mysql/migration.mysql";
 // import { Users1Model } from '../../models/users1.model';
+
+import { TColumns } from "../core/mysql/interfaces/forge.interface";
+import { Migration } from "../core/mysql/migration.mysql";
 
 interface IUser {
     id: number,
@@ -15,10 +16,12 @@ interface IUser {
 }
 
 export class User extends Migration<IUser> {
-    fields: TColumns<IUser>;
     private table: string = 'users2';
+    fields: TColumns<IUser>;
+
     constructor() {
         super();
+
         this.fields = {
             id: {
                 type: 'INT',
@@ -67,16 +70,21 @@ export class User extends Migration<IUser> {
                 type: 'DATETIME',
                 default: 'NULL ON UPDATE NOW()',
             }
-        };
+        }
     }
+
     async up(): Promise<void> {
         try {
+
             this.addField(this.fields);
+
             this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
-            // this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
-            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba' });
+            this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
+
+            await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba1' });
         } catch (error: any) {
             console.log(error.message);
+            throw new Error(error.message);
         }
     }
 
@@ -85,12 +93,20 @@ export class User extends Migration<IUser> {
             await this.dropTableIfExists(this.table);
         } catch (error: any) {
             console.log(error.message);
+            throw new Error(error.message);
         }
     }
 }
 
-/* const users = new Users1Model();
+const user = new User();
 const main = async () => {
-    const user = await users.select({ select: ['age', 'first_name'], where: { id: 1 } });
+    try {
+        await user.down();
+        await user.up();
+    } catch (error: any) {
+        console.log(error.message);
+    }
     // user[0].
-} */
+}
+
+main();
