@@ -116,7 +116,7 @@ export default class MakeModel extends Mixin(Common) {
                 }
             ],
             imports: [
-                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../../core/seeds/seeder' : this.namePackage, namedImports: [{ name: ' Seeder ' }] },
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../../core/seeds/seeder' : 'cuby-orm', namedImports: [{ name: ' Seeder ' }] },
             ],
             defaultExportExpression: nameClass
         });

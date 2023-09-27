@@ -56,7 +56,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
         ${ansiColors.cyan('db:migration ')}Create a migration file with the given name.
         ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
-        ${ansiColors.cyan('db:config:list')}List all config.
+        ${ansiColors.cyan('db:config:list')} List all config.
 
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
