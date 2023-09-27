@@ -7,6 +7,8 @@
 
 * [Comandos importantes](#Comandos importantes)
 
+Token `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`
+
 Clonar el repositorio desde la rama development.
 
 ```
@@ -29,13 +31,16 @@ comando para ver lo que se publicaría en npm
 npm publish --dry-run
 ```
 
-
-
 Comando para publicar el paquete npm.
 
 ```bash
 npm publish cuby-orm
 ```
 
+Comando para empaquetar desarrollo para probarlo.
+
+```bash
+npm pack
+```
 
 ## Quick start

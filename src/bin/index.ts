@@ -3,4 +3,12 @@ import { Cuby } from "./cuby";
 
 const cuby = new Cuby();
 
-cuby.interpreInput();
+const main = async () => {
+    try {
+        await cuby.interpreInput();
+    } catch (error: any) {
+        console.log(error.message);
+    }
+}
+
+main();

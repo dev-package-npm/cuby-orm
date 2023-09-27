@@ -2,11 +2,16 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { ICubyConfig } from "../../bin/cuby";
 import ansiColors from "ansi-colors";
-import { Model } from '../mysql/models/model';
-const { name }: { version: string } & { [k: string]: any } = JSON.parse(fs.readFileSync(path.join(path.resolve(), 'package.json'), 'utf8'));
+import { packageName } from '../common';
+
+let name = packageName;
 const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
+let seederPath: string;
+const pathPackage = path.join(__dirname, '../../../', nameConfigFile);
 const { database: databaseFolder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../', nameConfigFile), 'utf8'));
-const seederPath = path.join(name != 'cuby-orm' ? path.resolve() : __dirname, name != 'cuby-orm' ? databaseFolder.seeds.path : '../../testing/database/seeds');
+if (fs.existsSync(pathPackage)) {
+    seederPath = path.join(name != 'cuby-orm' ? path.resolve() : __dirname, name != 'cuby-orm' ? databaseFolder?.seeds.path : '../../testing/database/seeds');
+}
 
 
 export class Seeder {

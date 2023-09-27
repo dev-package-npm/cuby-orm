@@ -7,3 +7,4 @@ src
 .vscode
 .github
 .cuby.dev.json
+cuby-orm-*.tgz
