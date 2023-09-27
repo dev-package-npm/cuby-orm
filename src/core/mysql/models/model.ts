@@ -180,7 +180,7 @@ export abstract class Model<T> implements IModelMysql<T> {
                     break;
             }
         } catch (error: any) {
-            if (this.executeDestroy) {
+            if (this.executeDestroy && !(String(error.message).includes('connect'))) {
                 (this.connection as PoolConnection).release();
                 (this.connection as PoolConnection).destroy();
             }
