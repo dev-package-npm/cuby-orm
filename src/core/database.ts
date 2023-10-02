@@ -38,8 +38,8 @@ export class Database {
     }
 
     public async getConnection<T extends mysql.PoolConnection | Pool>(params?: Omit<TConfigCuby, 'environments'>): Promise<T> {
-        await this.initialize();
         try {
+            await this.initialize();
             switch (params !== undefined ? params.type : this.type) {
                 case 'mysql':
                     const pool = await mysql.createPool(params !== undefined ? params.connection as mysql.PoolConfig : this.configPool as mysql.PoolConfig);
@@ -77,31 +77,35 @@ export class Database {
     }
 
     public async initialize(): Promise<Database> {
-        loadEnvFile();
+        try {
+            loadEnvFile();
 
-        const env: string = process.env.NODE_ENV as string;
-        if (this._config == undefined) {
-            this._config = await this.getConfigDatabaseForFile();
-        }
+            const env: string = process.env.NODE_ENV as string;
+            if (this._config == undefined) {
+                this._config = await this.getConfigDatabaseForFile();
+            }
 
-        if (this._config != undefined) {
-            if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
-                this.setValue(this._config?.environments[env]);
-            } else
-                this.setValue(this._config);
+            if (this._config != undefined) {
+                if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
+                    this.setValue(this._config?.environments[env]);
+                } else
+                    this.setValue(this._config);
+            }
+            return this;
+        } catch (error: any) {
+            throw new Error(error.message);
         }
-        return this;
     }
 
     private async getConfigDatabaseForFile(): Promise<TConfigCuby | undefined> {
         try {
             const pathConfigFile = searchFileConfig(this.rootDir, 'cuby.config');
             if (pathConfigFile !== '' && pathConfigFile !== undefined) {
-                const config = await import(pathConfigFile) as { configDatabase?: TConfigCuby };
-                if (config?.configDatabase != undefined)
-                    return config.configDatabase;
-                else throw new Error('configDatabase property not found');
-            }
+                const config = await import(pathConfigFile);
+                if (Object.entries(config).length != 0 && config?.[Object.keys(config)[0]] != undefined)
+                    return config?.[Object.keys(config)[0]] as TConfigCuby;
+                else throw new Error('No configuration found, make sure to export the configuration');
+            } else throw new Error('No database configuration file found');
         } catch (error: any) {
             throw new Error(error.message);
         }
