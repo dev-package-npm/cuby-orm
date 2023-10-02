@@ -129,31 +129,39 @@ export abstract class Model<T> implements IModelMysql<T> {
     //#endregion
 
     public async getDatabaseName() {
-        return (await this.database).databaseName;
+        try {
+            return (await this.database).databaseName;
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }> {
-        if (!this.connection)
-            this.connection = await database.getConnection() as PoolConnection;
+        try {
+            if (!this.connection)
+                this.connection = await database.getConnection() as PoolConnection;
 
-        if (((await this.database).type == 'mysql') && this.connection)
-            await (this.connection as PoolConnection).beginTransaction();
-        return {
-            commit: async () => {
-                if (((await this.database).type == 'mysql') && this.connection) {
-                    await (this.connection as PoolConnection).commit();
-                    (this.connection as PoolConnection).release();
-                    (this.connection as PoolConnection).destroy();
+            if (((await this.database).type == 'mysql') && this.connection)
+                await (this.connection as PoolConnection).beginTransaction();
+            return {
+                commit: async () => {
+                    if (((await this.database).type == 'mysql') && this.connection) {
+                        await (this.connection as PoolConnection).commit();
+                        (this.connection as PoolConnection).release();
+                        (this.connection as PoolConnection).destroy();
+                    }
+                },
+                rollback: async () => {
+                    if (((await this.database).type == 'mysql') && this.connection) {
+                        await (this.connection as PoolConnection).rollback();
+                        (this.connection as PoolConnection).release();
+                        (this.connection as PoolConnection).destroy();
+                    }
                 }
-            },
-            rollback: async () => {
-                if (((await this.database).type == 'mysql') && this.connection) {
-                    await (this.connection as PoolConnection).rollback();
-                    (this.connection as PoolConnection).release();
-                    (this.connection as PoolConnection).destroy();
-                }
-            }
-        };
+            };
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     public async query(sentence: string, values?: any): Promise<any> {

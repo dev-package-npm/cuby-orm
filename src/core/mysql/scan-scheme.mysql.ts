@@ -60,7 +60,7 @@ export default class scanSchemeMysql extends Model<any> {
         return await this.query(this.sqlQuery);
     }
 
-    public async getDatabase(): Promise<string[]> {
+    public async getDatabaseNames(): Promise<string[]> {
         try {
             this.sqlQuery = `
         SHOW DATABASES WHERE \`Database\` NOT LIKE 'mysql%' AND \`Database\` NOT LIKE 'information_schema%' AND \`Database\` NOT LIKE 'performance_schema%';`;

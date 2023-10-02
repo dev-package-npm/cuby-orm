@@ -9,10 +9,21 @@ import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
 import { Mixin } from 'ts-mixer';
 import { packageName } from '../core/common';
 
+interface IConstrucMakeModel {
+    fileNameModel: string,
+    pathModel: string,
+    pathSeed: string,
+    fileNameSeed: string,
+    pathMigration: string,
+    fileNameMigration: string
+}
+
 export default class MakeModel extends Mixin(Common) {
     protected fileNameModel: string;
     protected fileNameSeed: string;
     protected pathModel: string;
+    protected pathMigration: string;
+    protected fileNameMigration: string;
     protected pathSeed: string;
     protected folderDatabaseModel: string[] = [];
     protected originalPathModel: string = '';
@@ -24,16 +35,18 @@ export default class MakeModel extends Mixin(Common) {
     private isScan: boolean = false;
     public namePackage = packageName;
 
-    constructor({ fileNameModel, pathModel, pathSeed, fileNameSeed }: { fileNameModel: string, pathModel: string, pathSeed: string, fileNameSeed: string }) {
+    constructor({ fileNameModel, pathModel, pathSeed, fileNameSeed, pathMigration, fileNameMigration }: IConstrucMakeModel) {
         super();
         this.fileNameModel = fileNameModel;
         this.pathModel = pathModel;
         this.originalPathModel = this.pathModel;
         this.pathSeed = pathSeed;
         this.fileNameSeed = fileNameSeed;
+        this.pathMigration = pathMigration;
+        this.fileNameMigration = fileNameMigration;
     }
 
-    protected async createModel(nameClass: string, inputModel: string) {
+    protected async createModelFile(nameClass: string, inputModel: string) {
         const file = createFile({
             fileName: `${this.replaceAll(inputModel, '-')}.${this.fileNameModel}`,
             classes: [
@@ -87,7 +100,90 @@ export default class MakeModel extends Mixin(Common) {
         }
     }
 
-    protected async createSeeder({ nameClass, inputSeed }: { nameClass: string, inputSeed: string }) {
+    protected async createMigrationFile(nameClass: string, inputMigration: string) {
+        const file = createFile({
+            fileName: `${this.replaceAll(inputMigration, '-')}.${this.fileNameMigration}`,
+            classes: [
+                {
+                    name: nameClass,
+                    isExported: true,
+                    extendsTypes: [`Migration<I${nameClass}>`],
+                    staticProperties: [
+
+                    ],
+                    properties: [
+                        {
+                            name: 'table',
+                            type: `string = "${inputMigration.split('-').slice(-1)[0]}"`,
+                            scope: 'private'
+                        },
+                        {
+                            name: 'fields',
+                            type: `TColumns<I${nameClass}>`,
+                            scope: 'public'
+                        }
+                    ],
+                    constructorDef: {
+                        onWriteFunctionBody: writer => {
+                            writer.writeLine("super();");
+                            writer.write("this.fields = {};");
+                        }
+                    },
+                    methods: [
+                        {
+                            name: 'up',
+                            isAsync: true,
+                            returnType: 'Promise<void>',
+                            onWriteFunctionBody: writer => {
+                                writer.write(`try {
+    this.addField(this.fields);
+    await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI' });
+} catch (error: any) {
+    console.log(error.message);
+}`);
+                            }
+                        },
+                        {
+                            name: 'down',
+                            isAsync: true,
+                            returnType: 'Promise<void>',
+                            onWriteFunctionBody: writer => {
+                                writer.write(`try {
+    await this.dropTableIfExists(this.table);
+} catch (error: any) {
+    console.log(error.message);
+}`);
+                            }
+                        }
+                    ]
+                }
+            ],
+            imports: [
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../../core/mysql/migration.mysql' : 'cuby-orm', namedImports: [{ name: ' Migration ' }] },
+                { moduleSpecifier: this.namePackage == 'cuby-orm' ? '../../../core/mysql/interfaces/forge.interface' : 'cuby-orm', namedImports: [{ name: ' TColumns ' }] }
+            ],
+            interfaces: [
+                {
+                    name: `I${nameClass}`,
+                    properties: this.interface,
+                    onAfterWrite: writer => writer.writeLine('//#endregion'),
+                    onBeforeWrite: writer => writer.writeLine('//#region Interface')
+                },
+            ]
+        });
+
+
+        if (fs.existsSync(this.pathMigration)) {
+            fs.writeFileSync(`${this.pathMigration}${file.fileName}`, file.write());
+        }
+        else {
+            let folder: any = this.pathMigration.split(path.sep);
+            folder = folder[folder.length - 2];
+            throw new Error(ansiColors.blueBright(`There is no folder '${ansiColors.redBright(folder)}' to create this file`));
+        }
+    }
+
+    protected async createSeederFile({ nameClass, inputSeed }: { nameClass: string, inputSeed: string }) {
         const file = createFile({
             fileName: `${this.replaceAll(inputSeed, '-')}.${this.fileNameSeed}`,
             classes: [
@@ -154,14 +250,14 @@ export default class MakeModel extends Mixin(Common) {
             let nameClassModel = this.addPrefix(model, 'Model');
             this.fields = this.fields.slice(0, this.fields.length - 2);
             this.fields += ']';
-            await this.createModel(nameClassModel, item.table.toLocaleLowerCase());
+            await this.createModelFile(nameClassModel, item.table.toLocaleLowerCase());
             this.fields = '';
             this.interface = [];
         }
     }
 
-    protected async getDatabase() {
-        return this.scanScheme.getDatabase();
+    protected async getDatabaseNames(): Promise<string[]> {
+        return await this.scanScheme.getDatabaseNames();
     }
 
     protected async createFolderModelScaned() {
@@ -175,7 +271,6 @@ export default class MakeModel extends Mixin(Common) {
             });
         }
     }
-
 
 
     private updateModelFile(filePath: string, readbleStream: Readable) {
