@@ -22,6 +22,7 @@
     "mysql",
     "cli",
     "cuby-orm",
+    "cuby orm",
     "databases",
     "migration",
     "seeds",

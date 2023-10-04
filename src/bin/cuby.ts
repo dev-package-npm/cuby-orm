@@ -111,6 +111,11 @@ ${ansiColors.yellowBright('Database')}
                         await this.model(this.input.slice(1));
                     else throw new Error(ansiColors.yellowBright('The directory provided is invalid or does not exist. Path: ') + ansiColors.blueBright(this.pathModel));
                 }
+                else if (params == 'db:create') {
+                    if (this.input.slice(1).length <= 1)
+                        await this.createDatabase(this.input.slice(1)[0]);
+                    else throw new Error(ansiColors.yellowBright("More than one parameter is not allowed"));
+                }
                 else if (params == 'db:seed') {
                     await this.seeder(this.input.slice(1));
                 }
@@ -348,6 +353,34 @@ ${ansiColors.yellowBright('Database')}
             }
         } catch (error: any) {
             throw new Error(error.message);
+        }
+    }
+
+    private async createDatabase(params: string) {
+        try {
+            let controlAction = false;
+            if (params != undefined && params.length > 0) {
+                if (this.regExpEspecialCharacter.test(params) || params.charAt(0) == '-' || params.charAt(0) == '_') {
+                    console.log(ansiColors.redBright("Unsupported characters: " + params));
+                    return;
+                }
+                controlAction = true;
+            } else {
+                await inquirer.prompt({
+                    type: 'input',
+                    name: 'name',
+                    message: 'Write the name of the database',
+                }).then(async (answer) => {
+                    params = answer.name;
+                    controlAction = true;
+                });
+            }
+            if (controlAction) {
+                await this.schemeMysql.createDatabase({ name: params, collation: { charset: 'UTF8', collation: 'UTF8_GENERAL_CI' } });
+                console.log(ansiColors.greenBright("Database created with the name " + ansiColors.blueBright(params)));
+            }
+        } catch (error: any) {
+            throw new Error(ansiColors.redBright(error.message));
         }
     }
 

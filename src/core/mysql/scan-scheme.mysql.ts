@@ -1,5 +1,6 @@
 import ansiColors from "ansi-colors";
 import { Model } from "./models/model";
+import { TCollationCharset } from "./interfaces/forge.interface";
 
 interface ISchemeColums {
     TABLE_CATALOG: string,
@@ -26,12 +27,20 @@ interface ISchemeColums {
     GENERATION_EXPRESSION: null
 }
 
-export default class scanSchemeMysql extends Model<any> {
+export default class SchemeMysql extends Model<any> {
     private sqlQuery: string = '';
     private _database: string = '';
 
     constructor() {
         super({ table: '', primaryKey: '', fields: [] });
+    }
+
+    public async createDatabase({ name, collation }: { name: string, collation: TCollationCharset }) {
+        try {
+            return await this.query(`CREATE DATABASE \`${name}\` ${collation != undefined ? `CHARACTER SET ${collation.charset} COLLATE ${collation.collation}` : ''}`);
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     public async getDatabaseTable(database?: string): Promise<{ table: string }[]> {

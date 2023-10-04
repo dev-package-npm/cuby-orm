@@ -5,7 +5,7 @@ import readLine from 'node:readline';
 import { createFile, InterfacePropertyStructure } from "ts-code-generator";
 import { Common } from "./common";
 import ansiColors from "ansi-colors";
-import scanSchemeMysql from '../core/mysql/scan-scheme.mysql';
+import SchemeMysql from '../core/mysql/scan-scheme.mysql';
 import { Mixin } from 'ts-mixer';
 import { packageName } from '../core/common';
 
@@ -27,7 +27,7 @@ export default class MakeModel extends Mixin(Common) {
     protected pathSeed: string;
     protected folderDatabaseModel: string[] = [];
     protected originalPathModel: string = '';
-    protected scanScheme = new scanSchemeMysql();
+    protected schemeMysql = new SchemeMysql();
     private interface: InterfacePropertyStructure[] = [];
     private fields: string = '';
     private primariKey: string = '';
@@ -82,7 +82,7 @@ export default class MakeModel extends Mixin(Common) {
 
         if (this.folderDatabaseModel.length !== 0) {
             this.pathModel = this.originalPathModel;
-            if (this.folderModel !== await this.scanScheme.getDatabaseName())
+            if (this.folderModel !== await this.schemeMysql.getDatabaseName())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
 
@@ -228,14 +228,14 @@ export default class MakeModel extends Mixin(Common) {
     protected async generateScanModel(database: string) {
         this.folderModel = database;
         this.isScan = true;
-        const tables = await this.scanScheme.getDatabaseTable(database);
+        const tables = await this.schemeMysql.getDatabaseTable(database);
         for (const item of tables) {
-            const columns = await this.scanScheme.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
+            const columns = await this.schemeMysql.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
             this.fields += '[';
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
-                    type: this.scanScheme.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
+                    type: this.schemeMysql.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
                     isOptional: item2.IS_NULLABLE == 'YES' ? true :
                         item2.COLUMN_KEY == 'PRI' ? true :
                             item2.COLUMN_DEFAULT != null ? true : false,
@@ -257,14 +257,14 @@ export default class MakeModel extends Mixin(Common) {
     }
 
     protected async getDatabaseNames(): Promise<string[]> {
-        return await this.scanScheme.getDatabaseNames();
+        return await this.schemeMysql.getDatabaseNames();
     }
 
     protected async createFolderModelScaned() {
         if (this.folderDatabaseModel.length !== 0) {
             this.folderDatabaseModel.forEach(async folder => {
                 if (!fs.existsSync(path.join(this.pathModel, folder))) {
-                    const nameDatabase = await this.scanScheme.getDatabaseName();
+                    const nameDatabase = await this.schemeMysql.getDatabaseName();
                     if (folder !== nameDatabase)
                         fs.mkdirSync(path.join(this.pathModel, folder), { recursive: true });
                 }
