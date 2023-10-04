@@ -1,8 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
 
-const pathTsConfig = path.join(path.resolve(), 'tsconfig.json');
-
 export const searchFileConfig = (pathDir: string, nameFileConfig: string): string => {
     const directories = fs.readdirSync(pathDir).filter(dir =>
         dir !== 'node_modules' &&

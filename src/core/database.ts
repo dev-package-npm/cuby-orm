@@ -84,7 +84,7 @@ export class Database {
             if (this._config == undefined) {
                 this._config = await this.getConfigDatabaseForFile();
             }
-
+            // Configurar entorno
             if (this._config != undefined) {
                 if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
                     this.setValue(this._config?.environments[env]);
@@ -105,7 +105,9 @@ export class Database {
                 if (Object.entries(config).length != 0 && config?.[Object.keys(config)[0]] != undefined)
                     return config?.[Object.keys(config)[0]] as TConfigCuby;
                 else throw new Error('No configuration found, make sure to export the configuration');
-            } else throw new Error('No database configuration file found');
+            }
+            // NOTE pone problema cuando no hay un archivo de configuración, buscar otra opción de disparar este error
+            else throw new Error('No database configuration file found');
         } catch (error: any) {
             throw new Error(error.message);
         }

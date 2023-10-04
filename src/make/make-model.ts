@@ -9,6 +9,8 @@ import SchemeMysql from '../core/mysql/scan-scheme.mysql';
 import { Mixin } from 'ts-mixer';
 import { packageName } from '../core/common';
 
+// const schemeMysql = new SchemeMysql();
+
 interface IConstrucMakeModel {
     fileNameModel: string,
     pathModel: string,
@@ -27,7 +29,6 @@ export default class MakeModel extends Mixin(Common) {
     protected pathSeed: string;
     protected folderDatabaseModel: string[] = [];
     protected originalPathModel: string = '';
-    protected schemeMysql = new SchemeMysql();
     private interface: InterfacePropertyStructure[] = [];
     private fields: string = '';
     private primariKey: string = '';
@@ -82,7 +83,9 @@ export default class MakeModel extends Mixin(Common) {
 
         if (this.folderDatabaseModel.length !== 0) {
             this.pathModel = this.originalPathModel;
-            if (this.folderModel !== await this.schemeMysql.getDatabaseName())
+            const schemeMysql = new SchemeMysql();
+
+            if (this.folderModel !== await schemeMysql.getDatabaseName())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
 
@@ -228,14 +231,16 @@ export default class MakeModel extends Mixin(Common) {
     protected async generateScanModel(database: string) {
         this.folderModel = database;
         this.isScan = true;
-        const tables = await this.schemeMysql.getDatabaseTable(database);
+        const schemeMysql = new SchemeMysql();
+
+        const tables = await schemeMysql.getDatabaseTable(database);
         for (const item of tables) {
-            const columns = await this.schemeMysql.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
+            const columns = await schemeMysql.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
             this.fields += '[';
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
-                    type: this.schemeMysql.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
+                    type: schemeMysql.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
                     isOptional: item2.IS_NULLABLE == 'YES' ? true :
                         item2.COLUMN_KEY == 'PRI' ? true :
                             item2.COLUMN_DEFAULT != null ? true : false,
@@ -256,22 +261,19 @@ export default class MakeModel extends Mixin(Common) {
         }
     }
 
-    protected async getDatabaseNames(): Promise<string[]> {
-        return await this.schemeMysql.getDatabaseNames();
-    }
-
     protected async createFolderModelScaned() {
+        const schemeMysql = new SchemeMysql();
+
         if (this.folderDatabaseModel.length !== 0) {
             this.folderDatabaseModel.forEach(async folder => {
                 if (!fs.existsSync(path.join(this.pathModel, folder))) {
-                    const nameDatabase = await this.schemeMysql.getDatabaseName();
+                    const nameDatabase = await schemeMysql.getDatabaseName();
                     if (folder !== nameDatabase)
                         fs.mkdirSync(path.join(this.pathModel, folder), { recursive: true });
                 }
             });
         }
     }
-
 
     private updateModelFile(filePath: string, readbleStream: Readable) {
         const originalContent = fs.createReadStream(filePath, 'utf8');

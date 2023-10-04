@@ -98,7 +98,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     private _baseModel: BaseModel<T>;
 
     private _fields: TArrayColumns<T> = [];
-    private database: Promise<Database> = database.initialize();
+    private database: Promise<Database>;
     private connection?: PoolConnection | Pool;
 
     private executeDestroy: boolean = false;
@@ -111,6 +111,7 @@ export abstract class Model<T> implements IModelMysql<T> {
             this._fields = fields;
         }
         this._baseModel = new BaseModel<T>(this.table, this);
+        this.database = database.initialize();
     }
 
     //#region  Setter  and getter

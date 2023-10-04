@@ -7,6 +7,7 @@ import { Mixin } from 'ts-mixer';
 import { Seeder } from '../core/seeds/seeder';
 import { packageName } from '../core/common';
 import moment from 'moment';
+import SchemeMysql from '../core/mysql/scan-scheme.mysql';
 
 //#region  Interfaces
 export interface ICubyConfig {
@@ -376,7 +377,8 @@ ${ansiColors.yellowBright('Database')}
                 });
             }
             if (controlAction) {
-                await this.schemeMysql.createDatabase({ name: params, collation: { charset: 'UTF8', collation: 'UTF8_GENERAL_CI' } });
+                const schemeMysql = new SchemeMysql();
+                await schemeMysql.createDatabase({ name: params, collation: { charset: 'UTF8', collation: 'UTF8_GENERAL_CI' } });
                 console.log(ansiColors.greenBright("Database created with the name " + ansiColors.blueBright(params)));
             }
         } catch (error: any) {
@@ -386,7 +388,9 @@ ${ansiColors.yellowBright('Database')}
 
     private async scanModel() {
         try {
-            const db = await this.getDatabaseNames();
+            const schemeMysql = new SchemeMysql();
+
+            const db = await schemeMysql.getDatabaseNames();
             if (Array.isArray(db) && db.length > 0)
                 await inquirer.prompt({
                     type: 'checkbox',
