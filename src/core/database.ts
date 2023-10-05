@@ -106,7 +106,6 @@ export class Database {
                     return config?.[Object.keys(config)[0]] as TConfigCuby;
                 else throw new Error('No configuration found, make sure to export the configuration');
             }
-            // NOTE pone problema cuando no hay un archivo de configuración, buscar otra opción de disparar este error
             else throw new Error('No database configuration file found');
         } catch (error: any) {
             throw new Error(error.message);
