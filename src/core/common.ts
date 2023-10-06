@@ -28,7 +28,7 @@ function fileGetProperties({ fileName, propertie }: { fileName: string, pathFile
         if (propertieObjet)
             return propertieObjet;
         return propertie ? propertieObjet || undefined : content;
-    } else throw new Error("File not found");
+    }
 }
 
 export { packageProject, pathPackage, packageName, fileGetProperties };
