@@ -33,13 +33,13 @@ const main = async () => {
         // const result = await userModel.delete(111);
         // console.log(result);
         // console.log(await userModel.getDatabaseName());
-        const user = await userModel.findAll({ excludeColumns: ['id', 'age'] });
+        // const user = await userModel.findAll({ excludeColumns: ['id', 'age', 'last_name'] });
+        // console.log(user[0].first_name);
+        const user = await userModel.find({
+            alias: { column: 'first_name', name: 'primer_nombre' },
+            excludeColumns: ['first_name']
+        }).build();
         console.log(user[0]);
-        // const user = await userModel.find({
-        //     alias: { column: 'first_name', name: 'primer_nombre' },
-        //     excludeColumns: ['first_name']
-        // }).where({ id: 4 }).build();
-        // console.log(user);
     } catch (error: any) {
         // await transaction.rollback();
         console.log(error.message);

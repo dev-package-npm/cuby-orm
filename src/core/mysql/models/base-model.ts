@@ -22,6 +22,7 @@ export class BaseModel<T> {
     }
 
     public where(conditions: Partial<T>, operator: 'AND' | 'OR' = 'AND'): Pick<BaseModel<T>, 'orderBy' | 'build'> {
+        if (conditions == undefined) throw new Error("Parameters cannot be empty in the where method");
         let whereClause = '';
         for (const key in conditions) {
             if (conditions.hasOwnProperty(key)) {

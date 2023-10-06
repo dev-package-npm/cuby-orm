@@ -6,6 +6,8 @@ import MakeModel from '../make/make-model';
 import { Mixin } from 'ts-mixer';
 import { Seeder } from '../core/seeds/seeder';
 import { packageName } from '../core/common';
+import moment from 'moment';
+import SchemeMysql from '../core/mysql/scan-scheme.mysql';
 
 //#region  Interfaces
 export interface ICubyConfig {
@@ -33,10 +35,10 @@ const nameConfigFile = packageName == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.jso
 const pathPackage = path.join(__dirname, '../../', nameConfigFile);
 const { model, index_folder, database }: ICubyConfig = JSON.parse(fs.readFileSync(pathPackage, 'utf8'));
 
-const seeder = new Seeder();
 
 export class Cuby extends Mixin(MakeModel) {
     //#region Private properties
+    private _seeder = new Seeder();
     private input: string[];
     private abrevCommand: string = 'cuby';
     private pathPackage = path.join(path.resolve(), '/package.json');
@@ -57,7 +59,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
         ${ansiColors.cyan('db:migration ')}Create a migration file with the given name.
         ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
-        ${ansiColors.cyan('db:config:list')} List all config.
+        ${ansiColors.cyan('db:config:list ')}List all config.
 
         ${ansiColors.cyan('--help, -h ')}Print this message.
         ${ansiColors.cyan('--version, -v ')}Print version with package.
@@ -76,7 +78,9 @@ ${ansiColors.yellowBright('Database')}
             fileNameModel: model.name,
             pathModel: path.join(path.resolve(), model.path),
             pathSeed: path.join(path.resolve(), database.seeds.path),
-            fileNameSeed: database.seeds.name
+            fileNameSeed: database.seeds.name,
+            pathMigration: path.join(path.resolve(), database.migrations.path),
+            fileNameMigration: database.migrations.name
         });
         //? Takes the data entered by the terminal, and stores it
         process.title = `${Array.from(process.argv).slice(2).join(" ")}`;
@@ -108,6 +112,11 @@ ${ansiColors.yellowBright('Database')}
                         await this.model(this.input.slice(1));
                     else throw new Error(ansiColors.yellowBright('The directory provided is invalid or does not exist. Path: ') + ansiColors.blueBright(this.pathModel));
                 }
+                else if (params == 'db:create') {
+                    if (this.input.slice(1).length <= 1)
+                        await this.createDatabase(this.input.slice(1)[0]);
+                    else throw new Error(ansiColors.yellowBright("More than one parameter is not allowed"));
+                }
                 else if (params == 'db:seed') {
                     await this.seeder(this.input.slice(1));
                 }
@@ -119,7 +128,9 @@ ${ansiColors.yellowBright('Database')}
                         await this.scanModel();
                 }
                 else if (params == 'db:migration') {
-                    console.log(ansiColors.yellowBright('no implementation'));
+                    if (fs.existsSync(this.pathMigration))
+                        await this.migration(this.input.slice(1));
+                    else throw new Error(ansiColors.yellowBright('The directory provided is invalid or does not exist. Path: ') + ansiColors.blueBright(this.pathMigration));
                 }
                 else if (params == 'db:config') {
                     this.setConfig(this.input.slice(1));
@@ -235,7 +246,19 @@ ${ansiColors.yellowBright('Database')}
 
     private async model(params: Array<string>) {
         try {
+            let controlAction = false;
             if (params.length != 0)
+                controlAction = true;
+            else
+                await inquirer.prompt({
+                    type: 'input',
+                    name: 'models',
+                    message: 'Write the name of models separated by space: ',
+                }).then(async (answer) => {
+                    params = String(answer.models).split(' ');
+                    controlAction = true;
+                });
+            if (controlAction)
                 for (const item of params) {
                     if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_') {
                         console.log(ansiColors.redBright("Unsupported characters: " + item));
@@ -243,21 +266,33 @@ ${ansiColors.yellowBright('Database')}
                     }
                     await this.executeAction(item, 'model');
                 }
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    }
+
+    private async migration(params: Array<string>) {
+        try {
+            let controlAction = false;
+            if (params.length != 0)
+                controlAction = true;
             else
                 await inquirer.prompt({
                     type: 'input',
-                    name: 'models',
-                    message: 'Write the name of models separated by space: ',
+                    name: 'migrations',
+                    message: 'Write the name of migrations separated by space: ',
                 }).then(async (answer) => {
-                    for (const item of String(answer.models).split(' ')) {
-                        if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_') {
-                            console.log(ansiColors.redBright("Unsupported characters: " + item));
-                            continue;
-                        }
-
-                        await this.executeAction(item, 'model');
-                    }
+                    params = String(answer.migrations).split(' ');
                 });
+            if (controlAction) {
+                for (const item of params) {
+                    if (this.regExpEspecialCharacter.test(item) || item.charAt(0) == '-' || item.charAt(0) == '_') {
+                        console.log(ansiColors.redBright("Unsupported characters: " + item));
+                        continue;
+                    }
+                    await this.executeAction(item, 'migration');
+                }
+            }
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -266,9 +301,9 @@ ${ansiColors.yellowBright('Database')}
     private async seeder(params: Array<string>) {
         try {
             if (params.length > 0) {
-                await seeder.call({ fileNameSeed: params });
+                await this._seeder.call({ fileNameSeed: params });
             } else {
-                const filesSeeds = await seeder.getFileSeeder();
+                const filesSeeds = await this._seeder.getFileSeeder();
                 if (filesSeeds.length > 0) {
                     await inquirer.prompt({
                         type: 'checkbox',
@@ -277,7 +312,7 @@ ${ansiColors.yellowBright('Database')}
                         message: 'select one or more seeds to run: ',
                     }).then(async (answer) => {
                         if (answer.files.length > 0) {
-                            await seeder.call({ fileNameSeed: answer.files });
+                            await this._seeder.call({ fileNameSeed: answer.files });
                         }
                         else throw new Error(ansiColors.yellowBright('You have not selected any value'));
                     });
@@ -299,7 +334,7 @@ ${ansiColors.yellowBright('Database')}
                     await this.executeAction(item, 'seed:create');
                 }
             } else {
-                const filesSeeds = await seeder.getFileSeeder();
+                const filesSeeds = await this._seeder.getFileSeeder();
                 if (filesSeeds.length > 0) {
                     await inquirer.prompt({
                         type: 'input',
@@ -322,9 +357,40 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
+    private async createDatabase(params: string) {
+        try {
+            let controlAction = false;
+            if (params != undefined && params.length > 0) {
+                if (this.regExpEspecialCharacter.test(params) || params.charAt(0) == '-' || params.charAt(0) == '_') {
+                    console.log(ansiColors.redBright("Unsupported characters: " + params));
+                    return;
+                }
+                controlAction = true;
+            } else {
+                await inquirer.prompt({
+                    type: 'input',
+                    name: 'name',
+                    message: 'Write the name of the database',
+                }).then(async (answer) => {
+                    params = answer.name;
+                    controlAction = true;
+                });
+            }
+            if (controlAction) {
+                const schemeMysql = new SchemeMysql();
+                await schemeMysql.createDatabase({ name: params, collation: { charset: 'UTF8', collation: 'UTF8_GENERAL_CI' } });
+                console.log(ansiColors.greenBright("Database created with the name " + ansiColors.blueBright(params)));
+            }
+        } catch (error: any) {
+            throw new Error(ansiColors.redBright(error.message));
+        }
+    }
+
     private async scanModel() {
         try {
-            const db = await this.getDatabase();
+            const schemeMysql = new SchemeMysql();
+
+            const db = await schemeMysql.getDatabaseNames();
             if (Array.isArray(db) && db.length > 0)
                 await inquirer.prompt({
                     type: 'checkbox',
@@ -358,9 +424,14 @@ ${ansiColors.yellowBright('Database')}
                     let seed = String(value).toLocaleLowerCase();
                     seed = seed.charAt(0).toUpperCase() + seed.slice(1);
                     let nameClassSeed = this.addPrefix(seed, 'Seeder');
-                    await this.createSeeder({ nameClass: nameClassSeed, inputSeed: value.toLocaleLowerCase() });
+                    await this.createSeederFile({ nameClass: nameClassSeed, inputSeed: value.toLocaleLowerCase() });
                     break;
                 case 'migration':
+                    let migration = String(value).toLocaleLowerCase();
+                    migration = migration.charAt(0).toUpperCase() + migration.slice(1);
+                    let nameClassMigration = this.addPrefix(migration, 'Migration');
+                    const date = moment().format('YYYY-MM-DD-HHmmss');
+                    await this.createMigrationFile(nameClassMigration, date + "-" + value.toLocaleLowerCase());
                     break;
                 case 'model':
                     let model = String(value).toLocaleLowerCase();
@@ -375,10 +446,10 @@ ${ansiColors.yellowBright('Database')}
                             default: false
                         }).then(async (answer2) => {
                             if (answer2.res)
-                                await this.createModel(nameClassModel, value.toLocaleLowerCase());
+                                await this.createModelFile(nameClassModel, value.toLocaleLowerCase());
                         });
                     } else
-                        await this.createModel(nameClassModel, value.toLocaleLowerCase());
+                        await this.createModelFile(nameClassModel, value.toLocaleLowerCase());
                     break;
             }
         } catch (error: any) {

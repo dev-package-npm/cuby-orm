@@ -98,7 +98,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     private _baseModel: BaseModel<T>;
 
     private _fields: TArrayColumns<T> = [];
-    private database: Promise<Database> = database.initialize();
+    private database: Promise<Database>;
     private connection?: PoolConnection | Pool;
 
     private executeDestroy: boolean = false;
@@ -111,6 +111,7 @@ export abstract class Model<T> implements IModelMysql<T> {
             this._fields = fields;
         }
         this._baseModel = new BaseModel<T>(this.table, this);
+        this.database = database.initialize();
     }
 
     //#region  Setter  and getter
@@ -129,31 +130,39 @@ export abstract class Model<T> implements IModelMysql<T> {
     //#endregion
 
     public async getDatabaseName() {
-        return (await this.database).databaseName;
+        try {
+            return (await this.database).databaseName;
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }> {
-        if (!this.connection)
-            this.connection = await database.getConnection() as PoolConnection;
+        try {
+            if (!this.connection)
+                this.connection = await database.getConnection() as PoolConnection;
 
-        if (((await this.database).type == 'mysql') && this.connection)
-            await (this.connection as PoolConnection).beginTransaction();
-        return {
-            commit: async () => {
-                if (((await this.database).type == 'mysql') && this.connection) {
-                    await (this.connection as PoolConnection).commit();
-                    (this.connection as PoolConnection).release();
-                    (this.connection as PoolConnection).destroy();
+            if (((await this.database).type == 'mysql') && this.connection)
+                await (this.connection as PoolConnection).beginTransaction();
+            return {
+                commit: async () => {
+                    if (((await this.database).type == 'mysql') && this.connection) {
+                        await (this.connection as PoolConnection).commit();
+                        (this.connection as PoolConnection).release();
+                        (this.connection as PoolConnection).destroy();
+                    }
+                },
+                rollback: async () => {
+                    if (((await this.database).type == 'mysql') && this.connection) {
+                        await (this.connection as PoolConnection).rollback();
+                        (this.connection as PoolConnection).release();
+                        (this.connection as PoolConnection).destroy();
+                    }
                 }
-            },
-            rollback: async () => {
-                if (((await this.database).type == 'mysql') && this.connection) {
-                    await (this.connection as PoolConnection).rollback();
-                    (this.connection as PoolConnection).release();
-                    (this.connection as PoolConnection).destroy();
-                }
-            }
-        };
+            };
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
     }
 
     public async query(sentence: string, values?: any): Promise<any> {
@@ -322,11 +331,6 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async delete(where: { condition: Partial<T>, operator?: TCondition }): Promise<IReturn>
     public async delete(where: any): Promise<IReturn> {
         const sqlQuery: string = this.fillSqlQueryToDelete(where);
-        return await this.query(sqlQuery);
-    }
-
-    public async truncate(): Promise<any> {
-        const sqlQuery: string = `TRUNCATE TABLE ${this._table}`;
         return await this.query(sqlQuery);
     }
 

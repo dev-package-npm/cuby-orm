@@ -18,7 +18,7 @@ type TColumnsAttributes<T> = {
 } & TCollationCharset;
 
 //#region  Tcollation charset
-type TCollationCharset = (
+export type TCollationCharset = (
     {
         charset?: 'UTF8';
         collation?: TCollation<'UTF8'>
