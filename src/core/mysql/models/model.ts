@@ -334,11 +334,6 @@ export abstract class Model<T> implements IModelMysql<T> {
         return await this.query(sqlQuery);
     }
 
-    public async truncate(): Promise<any> {
-        const sqlQuery: string = `TRUNCATE TABLE ${this._table}`;
-        return await this.query(sqlQuery);
-    }
-
     //#region Private methods
 
     private fillSqlQueryToInsert<C extends keyof T>({ columns, values }: { columns: C[], values: any }): string {
