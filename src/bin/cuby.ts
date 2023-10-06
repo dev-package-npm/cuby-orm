@@ -62,11 +62,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:config:list ')}List all config.
 
         ${ansiColors.cyan('--help, -h ')}Print this message.
-        ${ansiColors.cyan('--version, -v ')}Print version with package.
-    
-    COMMAND OPTIONS
-        ${ansiColors.cyan('--name ')}Name files ${ansiColors.redBright('Not applied')}.
-        ${ansiColors.cyan('--add ')}Name module.`;
+        ${ansiColors.cyan('--version, -v ')}Print version with package.`;
 
     protected version: string = version;
     protected pathIndex: string = path.join(path.resolve(), index_folder);
@@ -136,7 +132,7 @@ ${ansiColors.yellowBright('Database')}
                     this.setConfig(this.input.slice(1));
                 }
                 else if (params == 'db:config:list') {
-                    this.setConfig(this.input.slice(1));
+                    this.getConfig(this.input.slice(1));
                 }
                 else throw new Error(ansiColors.yellowBright('Command is not valid'));
             }
@@ -211,6 +207,9 @@ ${ansiColors.yellowBright('Database')}
 
     protected getConfig(params: string[]): void {
         try {
+            const config = fs.readFileSync(this.pathConfig, 'utf8');
+            let content: ICubyConfig = JSON.parse(config);
+            console.log(content);
         } catch (error: any) {
             throw new Error(error.message);
         }

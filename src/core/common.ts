@@ -11,4 +11,24 @@ if (fs.existsSync(pathPackage)) {
     packageName = packageProject?.name;
 }
 
-export { packageProject, pathPackage, packageName };
+function fileGetProperties({ fileName, propertie }: { fileName: string, pathFileName?: string, propertie?: string }) {
+    const pathFile = path.join(path.resolve(), fileName);
+    if (fs.existsSync(pathFile)) {
+        let content = fs.readFileSync(pathFile, 'utf-8');
+        content = content.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+        content = JSON.parse(content);
+        let propertieObjet = content;
+        const properties: any = propertie?.split('.');
+        if (properties)
+            for (const item of properties) {
+                if (propertieObjet[item] != undefined)
+                    propertieObjet = propertieObjet[item];
+                else break;
+            }
+        if (propertieObjet)
+            return propertieObjet;
+        return propertie ? propertieObjet || undefined : content;
+    } else throw new Error("File not found");
+}
+
+export { packageProject, pathPackage, packageName, fileGetProperties };

@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { ICubyConfig } from "../../bin/cuby";
 import ansiColors from "ansi-colors";
-import { packageName } from '../common';
+import { fileGetProperties, packageName } from '../common';
 
 let name = packageName;
 const nameConfigFile = name == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
@@ -10,7 +10,9 @@ let seederPath: string;
 const pathPackage = path.join(__dirname, '../../../', nameConfigFile);
 const { database: databaseFolder }: ICubyConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../', nameConfigFile), 'utf8'));
 if (fs.existsSync(pathPackage)) {
-    seederPath = path.join(name != 'cuby-orm' ? path.resolve() : __dirname, name != 'cuby-orm' ? databaseFolder?.seeds.path : '../../testing/database/seeds');
+    // TODO Resolver si src es dinámico
+    const build = fileGetProperties({ fileName: 'tsconfig.json', propertie: 'compilerOptions.outDir' });
+    seederPath = path.join(name != 'cuby-orm' ? path.join(path.resolve(), build != undefined ? path.normalize(build) : '') : __dirname, name != 'cuby-orm' ? databaseFolder?.seeds.path.replace('src/', '') : '../../testing/database/seeds');
 }
 
 
