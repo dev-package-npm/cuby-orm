@@ -1,6 +1,6 @@
 {
   "name": "cuby-orm",
-  "version": "0.0.4-2",
+  "version": "0.0.4-3",
   "description": "Cuby-ORM is an Object Relational Mapping (ORM) library for Node.js applications. It simplifies database interaction by allowing developers to scan existing database models and create new ones. Additionally, Cuby-ORM supports migrations and seeders, making it easy to manage database changes and populate initial data.",
   "main": "build/index.js",
   "types": "build/types/index.d.ts",
