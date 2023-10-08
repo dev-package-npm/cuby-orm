@@ -34,7 +34,7 @@ const { version }: { version: string } & { [k: string]: any } = JSON.parse(fs.re
 const nameConfigFile = packageName == 'cuby-orm' ? '.cuby.dev.json' : '.cuby.json';
 const pathPackage = path.join(__dirname, '../../', nameConfigFile);
 const { model, index_folder, database }: ICubyConfig = JSON.parse(fs.readFileSync(pathPackage, 'utf8'));
-
+export { index_folder };
 
 export class Cuby extends Mixin(MakeModel) {
     //#region Private properties

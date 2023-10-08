@@ -8,6 +8,7 @@ import ansiColors from "ansi-colors";
 import SchemeMysql from '../core/mysql/scan-scheme.mysql';
 import { Mixin } from 'ts-mixer';
 import { packageName } from '../core/common';
+import { index_folder } from '../bin/cuby';
 
 // const schemeMysql = new SchemeMysql();
 
@@ -93,8 +94,10 @@ export default class MakeModel extends Mixin(Common) {
             if (this.isScan && fs.existsSync(path.join(this.pathModel, file.fileName))) {
                 let content = new Readable({ encoding: 'utf-8', read() { this.push(file.write()), this.push(null) } });
                 this.updateModelFile(path.join(this.pathModel, file.fileName), content);
-            } else
+            } else {
+                console.log((this.pathModel + file.fileName).split(index_folder)[1]);
                 fs.writeFileSync(`${this.pathModel}${file.fileName}`, file.write());
+            }
         }
         else {
             let folder: any = this.pathModel.split(path.sep);
