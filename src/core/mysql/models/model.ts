@@ -172,8 +172,8 @@ export abstract class Model<T> implements IModelMysql<T> {
             switch (database.type) {
                 case 'mysql':
                     if (!this.connection) {
-                        this.executeDestroy = true;
                         this.connection = await database.getConnection() as PoolConnection;
+                        this.executeDestroy = true;
                         results = await this.connection.query(sentence, values);
                         this.connection.release();
                         this.connection.destroy();
