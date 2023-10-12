@@ -65,54 +65,58 @@ export class BaseModel<T> {
     }
 
     public async build(): Promise<T[]> {
-        if (Object.keys(this.alias).length != 0) {
-            if (this.selectColumns.length == 0 || this.selectColumns[0] == '*') {
-                this.selectColumns = [];
-                for (const item of this.model.fields) {
-                    const index = this.excludeColumns.findIndex(column => column == item);
-                    if (index == -1)
-                        this.selectColumns.push(<string>item);
-                }
-            }
-            if (Array.isArray(this.alias))
-                for (const item of this.alias) {
-                    const index = this.selectColumns.findIndex(column => column === item.column);
-                    if (index != -1) {
-                        this.selectColumns.splice(index, 1, `${item.column} AS ${item.name}`);
+        try {
+            if (Object.keys(this.alias).length != 0) {
+                if (this.selectColumns.length == 0 || this.selectColumns[0] == '*') {
+                    this.selectColumns = [];
+                    for (const item of this.model.fields) {
+                        const index = this.excludeColumns.findIndex(column => column == item);
+                        if (index == -1)
+                            this.selectColumns.push(<string>item);
                     }
                 }
-            else {
-                const index = this.selectColumns.findIndex(column => column === this.alias.column);
-                if (index != -1) {
-                    this.selectColumns.splice(index, 1, `${this.alias.column} AS ${this.alias.name}`);
+                if (Array.isArray(this.alias))
+                    for (const item of this.alias) {
+                        const index = this.selectColumns.findIndex(column => column === item.column);
+                        if (index != -1) {
+                            this.selectColumns.splice(index, 1, `${item.column} AS ${item.name}`);
+                        }
+                    }
+                else {
+                    const index = this.selectColumns.findIndex(column => column === this.alias.column);
+                    if (index != -1) {
+                        this.selectColumns.splice(index, 1, `${this.alias.column} AS ${this.alias.name}`);
+                    }
                 }
             }
-        }
 
-        if (this.excludeColumns.length != 0) {
-            this.selectColumns = <string[]>this.model.fields.filter(field => !this.excludeColumns.includes(<string>field))
-        }
-
-        if (this.subQueries.length !== 0)
-            for (const item of this.subQueries) {
-                this.selectColumns.push(item);
+            if (this.excludeColumns.length != 0) {
+                this.selectColumns = <string[]>this.model.fields.filter(field => !this.excludeColumns.includes(<string>field))
             }
-        let sqlQuery = `SELECT ${this.selectColumns || '*'} FROM ${this.__table}`;
 
-        if (this.joinClauses.length > 0) {
-            sqlQuery += ` ${this.joinClauses.join(' ')}`;
-        }
+            if (this.subQueries.length !== 0)
+                for (const item of this.subQueries) {
+                    this.selectColumns.push(item);
+                }
+            let sqlQuery = `SELECT ${this.selectColumns || '*'} FROM ${this.__table}`;
 
-        if (this.whereConditions.length > 0) {
-            sqlQuery += ` WHERE ${this.whereConditions.join(' ')}`;
-        }
+            if (this.joinClauses.length > 0) {
+                sqlQuery += ` ${this.joinClauses.join(' ')}`;
+            }
 
-        if (this.orderByColumn) {
-            sqlQuery += ` ORDER BY ${this.orderByColumn} ${this.orderByDirection}`;
+            if (this.whereConditions.length > 0) {
+                sqlQuery += ` WHERE ${this.whereConditions.join(' ')}`;
+            }
+
+            if (this.orderByColumn) {
+                sqlQuery += ` ORDER BY ${this.orderByColumn} ${this.orderByDirection}`;
+            }
+            const resultQuery = await this.model.query(sqlQuery);
+            this.clearVariable();
+            return Promise.resolve(resultQuery);
+        } catch (error: any) {
+            return Promise.reject(error.message);
         }
-        const resultQuery = await this.model.query(sqlQuery);
-        this.clearVariable();
-        return Promise.resolve(resultQuery);
     }
 
     private clearVariable() {
