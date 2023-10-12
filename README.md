@@ -18,7 +18,7 @@ npx cuby -h
 
 It will display the following.
 
-```plaintext
+```bash
 Database
     Example command
         cuby <command> --help More information
@@ -29,15 +29,13 @@ Database
 	db:seed:create Create file seed.
         db:model Create a model with the specified name.   
         db:scan:model Scan models from selected databases.   
+	db:scan:model:table Scan models of the selected tables. 
         db:migration Create a model with the specified name. 
         db:config Command to configure some properties, to show more help use npx cuby db:config -h.
 
         --help, -h Print this message.
         --version, -v Print version with package.
 
-    COMMAND OPTIONS
-        --name Name files Not applied.
-        --add Name module.
 ```
 
 Create a configuration file for the database with the following content:

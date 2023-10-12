@@ -57,6 +57,7 @@ ${ansiColors.yellowBright('Database')}
         ${ansiColors.cyan('db:seed:create ')}Create file seed.
         ${ansiColors.cyan('db:model ')}Create a model with the specified name.
         ${ansiColors.cyan('db:scan:model ')}Scan models from selected databases.
+        ${ansiColors.cyan('db:scan:model:table ')}Scan models of the selected tables.
         ${ansiColors.cyan('db:migration ')}Create a migration file with the given name.
         ${ansiColors.cyan('db:config ')}Command to configure some properties, to show more help use ${ansiColors.yellowBright('npx cuby db:config -h')}.
         ${ansiColors.cyan('db:config:list ')}List all config.
@@ -122,6 +123,10 @@ ${ansiColors.yellowBright('Database')}
                 else if (params == 'db:scan:model') {
                     if (this.validateQuantityArguments(this.input, 0))
                         await this.scanModel();
+                }
+                else if (params == 'db:scan:model:table') {
+                    if (this.validateQuantityArguments(this.input, 0))
+                        await this.scanModelTable();
                 }
                 else if (params == 'db:migration') {
                     if (fs.existsSync(this.pathMigration))
@@ -413,11 +418,53 @@ ${ansiColors.yellowBright('Database')}
         }
     }
 
-    private async executeAction(value: string, type: 'seed:create' | 'migration' | 'model' | 'scan:model') {
+    private async scanModelTable() {
+        try {
+            const schemeMysql = new SchemeMysql();
+            const db = await schemeMysql.getDatabaseNames();
+            if (Array.isArray(db) && db.length > 0)
+                await inquirer.prompt({
+                    type: 'list',
+                    name: 'database',
+                    choices: db,
+                    message: 'Select the database: ',
+                }).then(async (answer) => {
+                    if (answer.database.length != 0) {
+                        this.folderDatabaseModel = [answer.database];
+                        this.folderModel = answer.database;
+                        await this.createFolderModelScaned();
+                        const tables = await schemeMysql.getDatabaseTable(answer.database);
+                        // return 0;
+                        if (Array.isArray(tables) && tables.length > 0)
+                            await inquirer.prompt({
+                                type: 'checkbox',
+                                name: 'tables',
+                                choices: tables.map(table => { return table.table }),
+                                message: 'Select one or more tables to scan: ',
+                            }).then(async (answer) => {
+                                if (answer.tables.length != 0) {
+                                    let tables: string[] = answer.tables;
+                                    this.scanAndCreateModels({ tables: tables.map(table => { return { table } }), schemeMysql });
+                                    this.pathModel = this.originalPathModel;
+                                }
+                                else throw new Error(ansiColors.yellowBright('You have not selected any value'));
+                            });
+                        else throw new Error(ansiColors.yellowBright('No tables found'));
+                    }
+                    else throw new Error(ansiColors.yellowBright('You have not selected any value'));
+                });
+            else throw new Error(ansiColors.yellowBright('No databases found'));
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    }
+
+
+    private async executeAction(value: string, type: 'seed:create' | 'migration' | 'model' | 'scan:model' | 'scan:model:table') {
         try {
             switch (type) {
                 case 'scan:model':
-                    await this.generateScanModel(value);
+                    await this.generateScanModel({ database: value });
                     break;
                 case 'seed:create':
                     let seed = String(value).toLocaleLowerCase();
