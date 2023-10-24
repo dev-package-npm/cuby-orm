@@ -248,7 +248,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async findId(params: Number): Promise<T>
     public async findId(params: any): Promise<any> {
         if (typeof params == 'number')
-            return (await this.query(`SELECT * FROM ${this.table}`))[0];
+            return (await this.query(`SELECT * FROM \`${this._table}\``))[0];
         let sqlQuery = `SELECT `;
         let { columns, id, excludeColumns, alias }: { columns: any[], id: number, excludeColumns: any[], alias: any } = params;
         if (columns == undefined && excludeColumns == undefined && id != undefined)
@@ -260,10 +260,10 @@ export abstract class Model<T> implements IModelMysql<T> {
                     if (index != -1)
                         columns.splice(index, 1, `${item} AS "${alias[item]}"`);
                 }
-            sqlQuery += `${columns} \nFROM ${this.table} \nWHERE id = '${id}'`;
+            sqlQuery += `${columns} \nFROM \`${this._table}\` \nWHERE id = '${id}'`;
         }
         else if (excludeColumns != undefined && id != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this.table} \nWHERE id = "${id}"`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\` \nWHERE id = "${id}"`;
         else throw new Error("Parameters cannot be empty");
         return (await this.query(sqlQuery))[0];
     }
@@ -286,7 +286,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async findAll(params: any): Promise<any[]> {
         let sqlQuery = `SELECT `;
         if (params == undefined) {
-            sqlQuery += `${this._fields} \nFROM ${this._table}`;
+            sqlQuery += `* \nFROM \`${this._table}\``;
             return await this.query(sqlQuery);
         }
 
@@ -300,10 +300,10 @@ export abstract class Model<T> implements IModelMysql<T> {
                     if (index != -1)
                         columns.splice(index, 1, `${item} AS "${alias[item]}"`);
                 }
-            sqlQuery += `${columns} \nFROM ${this._table}`;
+            sqlQuery += `${columns} \nFROM \`${this._table}\``;
         }
         else if (excludeColumns != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this._table}`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\``;
         else throw new Error("Parameters cannot be empty");
         return await this.query(sqlQuery);
     }
@@ -341,7 +341,7 @@ export abstract class Model<T> implements IModelMysql<T> {
         if (values == undefined || columns == undefined || (Array.isArray(values) && values.length == 0))
             throw new Error('Parameters cannot be empty or undefined');
 
-        let sqlQuery: string = `INSERT INTO ${this._table}(${columns.map(column => `\`${<string>column}\``)}) `;
+        let sqlQuery: string = `INSERT INTO \`${this._table}(${columns.map(column => `\`${<string>column}\``)}) `;
         if (Array.isArray(values)) {
             sqlQuery += `VALUES${values.map(item => `(${columns.map(column => `'${item[column]}'`)})`).join(', \n')}`;
             return sqlQuery;
@@ -355,14 +355,14 @@ export abstract class Model<T> implements IModelMysql<T> {
     private fillSqlQueryToUpdate(data: any, where: { condition: any, operator?: TCondition }): string {
         if (Object.entries(data).length == 0 || Object.entries(where.condition).length == 0) throw new Error("Parameters cannot be empty");
 
-        let sqlQuery = `UPDATE ${this._table}\nSET ${Object.keys(data).map(key => `${key} = '${data[key]}'`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
+        let sqlQuery = `UPDATE \`${this._table}\`\nSET ${Object.keys(data).map(key => `${key} = '${data[key]}'`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
     }
 
     private fillSqlQueryToDelete(where: { condition: any, operator?: TCondition } | number): string {
         if (typeof where != 'number' && Object.entries(where.condition).length == 0)
             throw new Error("Parameters cannot be empty");
-        let sqlQuery: string = `DELETE FROM ${this.table}\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = '${where}'` : Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
+        let sqlQuery: string = `DELETE FROM \`${this._table}\`\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = '${where}'` : Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
     }
 

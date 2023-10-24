@@ -427,6 +427,7 @@ ${ansiColors.yellowBright('Database')}
                     type: 'list',
                     name: 'database',
                     choices: db,
+                    default: await schemeMysql.getDatabaseName(),
                     message: 'Select the database: ',
                 }).then(async (answer) => {
                     if (answer.database.length != 0) {
