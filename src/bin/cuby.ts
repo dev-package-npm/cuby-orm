@@ -400,6 +400,7 @@ ${ansiColors.yellowBright('Database')}
                     type: 'checkbox',
                     name: 'databases',
                     choices: db,
+                    default: [await schemeMysql.getDatabaseName()],
                     message: 'Select one or more databases to scan: ',
                 }).then(async (answer) => {
                     if (answer.databases.length != 0) {
