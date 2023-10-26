@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
 import { TCondition, TDirection, TOperatorWhere } from '../interfaces/sql';
-import { IModelMysql } from '../interfaces/mysql.model';
+import { IModelMysql, ISchemeColums } from '../interfaces/mysql.model';
 //#endregion
 
 //#region Interface
@@ -338,6 +338,17 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async delete(where: any): Promise<IReturn> {
         const sqlQuery: string = this.fillSqlQueryToDelete(where);
         return await this.query(sqlQuery);
+    }
+
+    protected async getColumnScheme<T extends ISchemeColums>({ scheme, table, database }: { scheme?: (keyof T)[], table: string, database?: string }): Promise<T[]> {
+        const sqlQuery = `
+        SELECT
+        ${scheme ?? '*'}
+        FROM information_schema.columns 
+        WHERE TABLE_NAME = ?
+        AND TABLE_SCHEMA = ?
+        `;
+        return await this.query(sqlQuery, [table, database ?? (await this.database).databaseName]);
     }
 
     //#region Private methods

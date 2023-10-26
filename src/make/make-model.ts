@@ -241,14 +241,14 @@ export default class MakeModel extends Mixin(Common) {
     protected async scanAndCreateModels({ tables, schemeMysql }: { tables: { table: string }[], schemeMysql: SchemeMysql }) {
         this.isScan = true;
         for (const item of tables) {
-            const columns = await schemeMysql.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
+            const columns = await schemeMysql.getColumnScheme({ scheme: ['COLUMN_NAME', 'EXTRA', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], table: item.table });
             this.fields += '[';
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
                     type: schemeMysql.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
                     isOptional: item2.IS_NULLABLE == 'YES' ? true :
-                        item2.COLUMN_KEY == 'PRI' ? true :
+                        item2.COLUMN_KEY == 'PRI' && item2.EXTRA == 'auto_increment' ? true :
                             item2.COLUMN_DEFAULT != null ? true : false,
                 });
                 this.fields += `'${item2.COLUMN_NAME}', `;
