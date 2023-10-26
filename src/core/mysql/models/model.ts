@@ -140,31 +140,29 @@ export abstract class Model<T> implements IModelMysql<T> {
         }
     }
 
-    public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }> {
+    public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined> {
         try {
-            if (this.transaction) return this.transaction;
+            if (this.transaction) throw new Error("A transaction instance already exists for the same model");
             else {
-                if (!this.connection)
+                // Implementación para mysql
+                if ((await this.database).type == 'mysql') {
                     this.connection = await database.getConnection() as PoolConnection;
+                    if (this.connection) {
+                        await (this.connection as PoolConnection).beginTransaction();
+                        this.executeDestroyTransaction = true;
 
-                if (((await this.database).type == 'mysql') && this.connection) {
-                    await (this.connection as PoolConnection).beginTransaction();
-                    this.executeDestroyTransaction = true;
-                }
-                this.transaction = {
-                    commit: async () => {
-                        if (((await this.database).type == 'mysql') && this.connection) {
-                            await (this.connection as PoolConnection).commit();
-                            this.destroyConnection(this.executeDestroyTransaction);
-                        }
-                    },
-                    rollback: async () => {
-                        if (((await this.database).type == 'mysql') && this.connection) {
-                            await (this.connection as PoolConnection)?.rollback();
-                            this.destroyConnection(this.executeDestroyTransaction);
-                        }
+                        this.transaction = {
+                            commit: async () => {
+                                await (this.connection as PoolConnection).commit();
+                                this.destroyConnection(this.executeDestroyTransaction);
+                            },
+                            rollback: async () => {
+                                await (this.connection as PoolConnection)?.rollback();
+                                this.destroyConnection(this.executeDestroyTransaction);
+                            }
+                        };
                     }
-                };
+                }
             }
             return this.transaction;
         } catch (error: any) {

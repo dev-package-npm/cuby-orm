@@ -1,5 +1,5 @@
 interface IModelMysql<T> {
-    beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }>
+    beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined>
 }
 
 interface ISchemeColums {
