@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
 import { TCondition, TDirection, TOperatorWhere } from '../interfaces/sql';
-import { IModelMysql } from '../interfaces/mysql.model';
+import { IModelMysql, ISchemeColums } from '../interfaces/mysql.model';
 //#endregion
 
 //#region Interface
@@ -102,6 +102,9 @@ export abstract class Model<T> implements IModelMysql<T> {
     private connection?: PoolConnection | Pool;
 
     private executeDestroy: boolean = false;
+    private executeDestroyTransaction: boolean = false;
+
+    transaction: { commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined;
 
     constructor(params?: IConstructorModel<T>) {
         if (params != undefined) {
@@ -139,27 +142,31 @@ export abstract class Model<T> implements IModelMysql<T> {
 
     public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; }> {
         try {
-            if (!this.connection)
-                this.connection = await database.getConnection() as PoolConnection;
+            if (this.transaction) return this.transaction;
+            else {
+                if (!this.connection)
+                    this.connection = await database.getConnection() as PoolConnection;
 
-            if (((await this.database).type == 'mysql') && this.connection)
-                await (this.connection as PoolConnection).beginTransaction();
-            return {
-                commit: async () => {
-                    if (((await this.database).type == 'mysql') && this.connection) {
-                        await (this.connection as PoolConnection).commit();
-                        (this.connection as PoolConnection).release();
-                        (this.connection as PoolConnection).destroy();
-                    }
-                },
-                rollback: async () => {
-                    if (((await this.database).type == 'mysql') && this.connection) {
-                        await (this.connection as PoolConnection).rollback();
-                        (this.connection as PoolConnection).release();
-                        (this.connection as PoolConnection).destroy();
-                    }
+                if (((await this.database).type == 'mysql') && this.connection) {
+                    await (this.connection as PoolConnection).beginTransaction();
+                    this.executeDestroyTransaction = true;
                 }
-            };
+                this.transaction = {
+                    commit: async () => {
+                        if (((await this.database).type == 'mysql') && this.connection) {
+                            await (this.connection as PoolConnection).commit();
+                            this.destroyConnection(this.executeDestroyTransaction);
+                        }
+                    },
+                    rollback: async () => {
+                        if (((await this.database).type == 'mysql') && this.connection) {
+                            await (this.connection as PoolConnection)?.rollback();
+                            this.destroyConnection(this.executeDestroyTransaction);
+                        }
+                    }
+                };
+            }
+            return this.transaction;
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -175,8 +182,7 @@ export abstract class Model<T> implements IModelMysql<T> {
                         this.connection = await database.getConnection() as PoolConnection;
                         this.executeDestroy = true;
                         results = await this.connection.query(sentence, values);
-                        this.connection.release();
-                        this.connection.destroy();
+                        this.destroyConnection();
                         this.connection = undefined;
                         return results;
                     }
@@ -190,8 +196,8 @@ export abstract class Model<T> implements IModelMysql<T> {
             }
         } catch (error: any) {
             if (this.executeDestroy && !(String(error.message).includes('connect'))) {
-                (this.connection as PoolConnection).release();
-                (this.connection as PoolConnection).destroy();
+                this.destroyConnection();
+                this.connection = undefined;
             }
             throw new Error(error.message);
         }
@@ -247,7 +253,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async findId(params: Number): Promise<T>
     public async findId(params: any): Promise<any> {
         if (typeof params == 'number')
-            return (await this.query(`SELECT * FROM ${this.table}`))[0];
+            return (await this.query(`SELECT * FROM \`${this._table}\``))[0];
         let sqlQuery = `SELECT `;
         let { columns, id, excludeColumns, alias }: { columns: any[], id: number, excludeColumns: any[], alias: any } = params;
         if (columns == undefined && excludeColumns == undefined && id != undefined)
@@ -259,10 +265,10 @@ export abstract class Model<T> implements IModelMysql<T> {
                     if (index != -1)
                         columns.splice(index, 1, `${item} AS "${alias[item]}"`);
                 }
-            sqlQuery += `${columns} \nFROM ${this.table} \nWHERE id = "${id}"`;
+            sqlQuery += `${columns} \nFROM \`${this._table}\` \nWHERE id = '${id}'`;
         }
         else if (excludeColumns != undefined && id != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this.table} \nWHERE id = "${id}"`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\` \nWHERE id = "${id}"`;
         else throw new Error("Parameters cannot be empty");
         return (await this.query(sqlQuery))[0];
     }
@@ -285,7 +291,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async findAll(params: any): Promise<any[]> {
         let sqlQuery = `SELECT `;
         if (params == undefined) {
-            sqlQuery += `${this._fields} \nFROM ${this._table}`;
+            sqlQuery += `* \nFROM \`${this._table}\``;
             return await this.query(sqlQuery);
         }
 
@@ -299,10 +305,10 @@ export abstract class Model<T> implements IModelMysql<T> {
                     if (index != -1)
                         columns.splice(index, 1, `${item} AS "${alias[item]}"`);
                 }
-            sqlQuery += `${columns} \nFROM ${this._table}`;
+            sqlQuery += `${columns} \nFROM \`${this._table}\``;
         }
         else if (excludeColumns != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM ${this._table}`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\``;
         else throw new Error("Parameters cannot be empty");
         return await this.query(sqlQuery);
     }
@@ -334,19 +340,30 @@ export abstract class Model<T> implements IModelMysql<T> {
         return await this.query(sqlQuery);
     }
 
+    protected async getColumnScheme<T extends ISchemeColums>({ scheme, table, database }: { scheme?: (keyof T)[], table: string, database?: string }): Promise<T[]> {
+        const sqlQuery = `
+        SELECT
+        ${scheme ?? '*'}
+        FROM information_schema.columns 
+        WHERE TABLE_NAME = ?
+        AND TABLE_SCHEMA = ?
+        `;
+        return await this.query(sqlQuery, [table, database ?? (await this.database).databaseName]);
+    }
+
     //#region Private methods
 
     private fillSqlQueryToInsert<C extends keyof T>({ columns, values }: { columns: C[], values: any }): string {
         if (values == undefined || columns == undefined || (Array.isArray(values) && values.length == 0))
             throw new Error('Parameters cannot be empty or undefined');
 
-        let sqlQuery: string = `INSERT INTO ${this._table}(${columns.map(column => `\`${<string>column}\``)}) `;
+        let sqlQuery: string = `INSERT INTO \`${this._table}\`(${columns.map(column => `\`${<string>column}\``)}) `;
         if (Array.isArray(values)) {
-            sqlQuery += `VALUES${values.map(item => `(${columns.map(column => `"${item[column]}"`)})`).join(', \n')}`;
+            sqlQuery += `VALUES${values.map(item => `(${columns.map(column => `'${item[column]}'`)})`).join(', \n')}`;
             return sqlQuery;
         }
         else {
-            sqlQuery += `VALUES(${columns.map(column => `"${values[column]}"`)})`;
+            sqlQuery += `VALUES(${columns.map(column => `'${values[column]}'`)})`;
             return sqlQuery;
         }
     }
@@ -354,15 +371,23 @@ export abstract class Model<T> implements IModelMysql<T> {
     private fillSqlQueryToUpdate(data: any, where: { condition: any, operator?: TCondition }): string {
         if (Object.entries(data).length == 0 || Object.entries(where.condition).length == 0) throw new Error("Parameters cannot be empty");
 
-        let sqlQuery = `UPDATE ${this._table}\nSET ${Object.keys(data).map(key => `${key} = "${data[key]}"`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = "${where.condition[key]}"`).join(`\n${where.operator || 'AND'} `)}`;
+        let sqlQuery = `UPDATE \`${this._table}\`\nSET ${Object.keys(data).map(key => `${key} = '${data[key]}'`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
     }
 
     private fillSqlQueryToDelete(where: { condition: any, operator?: TCondition } | number): string {
         if (typeof where != 'number' && Object.entries(where.condition).length == 0)
             throw new Error("Parameters cannot be empty");
-        let sqlQuery: string = `DELETE FROM ${this.table}\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = "${where}"` : Object.keys(where.condition).map(key => `${key} = "${where.condition[key]}"`).join(`\n${where.operator || 'AND'} `)}`;
+        let sqlQuery: string = `DELETE FROM \`${this._table}\`\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = '${where}'` : Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
         return sqlQuery;
+    }
+
+    private destroyConnection(executeDestroyTransaction?: boolean) {
+        if ((executeDestroyTransaction ?? this.executeDestroy) && this.connection) {
+            (this.connection as PoolConnection).release();
+            (this.connection as PoolConnection).destroy();
+            if (executeDestroyTransaction != undefined) this.executeDestroyTransaction = false;
+        }
     }
 
     //#endregion

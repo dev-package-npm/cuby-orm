@@ -33,7 +33,7 @@ export default class MakeModel extends Mixin(Common) {
     private interface: InterfacePropertyStructure[] = [];
     private fields: string = '';
     private primariKey: string = '';
-    private folderModel: string = '';
+    public folderModel: string = '';
     private isScan: boolean = false;
     public namePackage = packageName;
 
@@ -89,10 +89,10 @@ export default class MakeModel extends Mixin(Common) {
             if (this.folderModel !== await schemeMysql.getDatabaseName())
                 this.pathModel = path.join(this.pathModel, this.folderModel, path.sep);
         }
-
         if (fs.existsSync(this.pathModel)) {
             if (this.isScan && fs.existsSync(path.join(this.pathModel, file.fileName))) {
                 let content = new Readable({ encoding: 'utf-8', read() { this.push(file.write()), this.push(null) } });
+                console.log("Updated > " + (this.pathModel + file.fileName).split(index_folder)[1]);
                 this.updateModelFile(path.join(this.pathModel, file.fileName), content);
             } else {
                 console.log((this.pathModel + file.fileName).split(index_folder)[1]);
@@ -231,21 +231,24 @@ export default class MakeModel extends Mixin(Common) {
         }
     }
 
-    protected async generateScanModel(database: string) {
+    protected async generateScanModel({ database }: { database: string, }) {
         this.folderModel = database;
-        this.isScan = true;
         const schemeMysql = new SchemeMysql();
-
         const tables = await schemeMysql.getDatabaseTable(database);
+        await this.scanAndCreateModels({ tables, schemeMysql });
+    }
+
+    protected async scanAndCreateModels({ tables, schemeMysql }: { tables: { table: string }[], schemeMysql: SchemeMysql }) {
+        this.isScan = true;
         for (const item of tables) {
-            const columns = await schemeMysql.getColumnScheme(['COLUMN_NAME', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], item.table);
+            const columns = await schemeMysql.getColumnScheme({ scheme: ['COLUMN_NAME', 'EXTRA', 'DATA_TYPE', 'COLUMN_KEY', 'COLUMN_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT'], table: item.table });
             this.fields += '[';
             for (const item2 of columns) {
                 this.interface.push({
                     name: item2.COLUMN_NAME,
                     type: schemeMysql.getType(item2.DATA_TYPE) !== -1 ? 'number' : 'string',
                     isOptional: item2.IS_NULLABLE == 'YES' ? true :
-                        item2.COLUMN_KEY == 'PRI' ? true :
+                        item2.COLUMN_KEY == 'PRI' && item2.EXTRA == 'auto_increment' ? true :
                             item2.COLUMN_DEFAULT != null ? true : false,
                 });
                 this.fields += `'${item2.COLUMN_NAME}', `;

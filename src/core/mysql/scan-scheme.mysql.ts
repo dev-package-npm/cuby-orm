@@ -1,31 +1,7 @@
 import ansiColors from "ansi-colors";
 import { Model } from "./models/model";
 import { TCollationCharset } from "./interfaces/forge.interface";
-
-interface ISchemeColums {
-    TABLE_CATALOG: string,
-    TABLE_SCHEMA: string,
-    TABLE_NAME: string,
-    COLUMN_NAME: string,
-    ORDINAL_POSITION: number,
-    COLUMN_DEFAULT: string,
-    IS_NULLABLE: 'NO' | 'YES',
-    DATA_TYPE: string,
-    CHARACTER_MAXIMUM_LENGTH: null,
-    CHARACTER_OCTET_LENGTH: null,
-    NUMERIC_PRECISION: null,
-    NUMERIC_SCALE: null,
-    DATETIME_PRECISION: 0,
-    CHARACTER_SET_NAME: null,
-    COLLATION_NAME: null,
-    COLUMN_TYPE: string,
-    COLUMN_KEY: 'PRI' | 'MUL',
-    EXTRA: string,
-    PRIVILEGES: string,
-    COLUMN_COMMENT: string,
-    IS_GENERATED: string,
-    GENERATION_EXPRESSION: null
-}
+import { ISchemeColums } from "./interfaces/mysql.model";
 
 export default class SchemeMysql extends Model<any> {
     private sqlQuery: string = '';
@@ -58,15 +34,15 @@ export default class SchemeMysql extends Model<any> {
         }
     }
 
-    public async getColumnScheme(scheme: (keyof ISchemeColums)[], table: string, database?: string): Promise<ISchemeColums[]> {
-        this.sqlQuery = `
+    async getColumnScheme<T extends ISchemeColums>({ scheme, table, database }: { scheme?: (keyof T)[], table: string, database?: string }): Promise<T[]> {
+        const sqlQuery = `
         SELECT
-        ${scheme}
+        ${scheme ?? '*'}
         FROM information_schema.columns 
-        WHERE TABLE_NAME = '${table}'
-        AND TABLE_SCHEMA = '${database || this._database}'
+        WHERE TABLE_NAME = ?
+        AND TABLE_SCHEMA = ?
         `;
-        return await this.query(this.sqlQuery);
+        return await this.query(sqlQuery, [table, database ?? await this._database]);
     }
 
     public async getDatabaseNames(): Promise<string[]> {
