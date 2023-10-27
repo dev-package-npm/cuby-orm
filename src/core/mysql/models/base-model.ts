@@ -18,7 +18,7 @@ export class BaseModel<T> {
 
     private joinClauses: string[] = [];
 
-    constructor(private __table: string, private model: Model<T>) {
+    constructor(private model: Model<T>) {
     }
 
     public where(conditions: Partial<T>, operator: 'AND' | 'OR' = 'AND'): Pick<BaseModel<T>, 'orderBy' | 'build'> {
@@ -98,7 +98,7 @@ export class BaseModel<T> {
                 for (const item of this.subQueries) {
                     this.selectColumns.push(item);
                 }
-            let sqlQuery = `SELECT ${this.selectColumns || '*'} FROM ${this.__table}`;
+            let sqlQuery = `SELECT ${this.selectColumns || '*'} FROM ${this.model.table}`;
 
             if (this.joinClauses.length > 0) {
                 sqlQuery += ` ${this.joinClauses.join(' ')}`;

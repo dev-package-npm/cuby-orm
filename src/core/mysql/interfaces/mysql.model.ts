@@ -1,5 +1,5 @@
 interface IModelMysql<T> {
-    beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined>
+    beginTransaction(): Promise<{ commit(): Promise<void>; rollback(): Promise<void>; } | undefined>
 }
 
 interface ISchemeColums {
@@ -19,7 +19,7 @@ interface ISchemeColums {
     CHARACTER_SET_NAME: null,
     COLLATION_NAME: null,
     COLUMN_TYPE: string,
-    COLUMN_KEY: 'PRI' | 'MUL',
+    COLUMN_KEY: 'PRI' | 'MUL' | 'UNI',
     EXTRA: string,
     PRIVILEGES: string,
     COLUMN_COMMENT: string,

@@ -5,6 +5,8 @@ import { Database } from '../../database';
 import { BaseModel, TSubQuery } from './base-model';
 import { TCondition, TDirection, TOperatorWhere } from '../interfaces/sql';
 import { IModelMysql, ISchemeColums } from '../interfaces/mysql.model';
+import { MySQLUtils } from '../mysql-utils';
+import { QueryBuilder } from '../query-builder';
 //#endregion
 
 //#region Interface
@@ -13,6 +15,10 @@ interface IConstructorModel<T> {
     table: string;
     primaryKey: keyof T | '';
     fields: TArrayColumns<T>
+}
+
+interface IMethodReturn<T> extends IReturn {
+    getInsert(): Promise<T>;
 }
 
 /**
@@ -96,6 +102,8 @@ export abstract class Model<T> implements IModelMysql<T> {
     private _table: string = '';
     private _primaryKey: keyof T | '' = '';
     private _baseModel: BaseModel<T>;
+    private _mysqlUtils: MySQLUtils<T>;
+    private _queryBuilder: QueryBuilder<T>;
 
     private _fields: TArrayColumns<T> = [];
     private database: Promise<Database>;
@@ -103,8 +111,9 @@ export abstract class Model<T> implements IModelMysql<T> {
 
     private executeDestroy: boolean = false;
     private executeDestroyTransaction: boolean = false;
+    private results!: IMethodReturn<T>;
 
-    transaction: { commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined;
+    transaction: { commit(): Promise<void>; rollback(): Promise<void>; } | undefined;
 
     constructor(params?: IConstructorModel<T>) {
         if (params != undefined) {
@@ -113,7 +122,9 @@ export abstract class Model<T> implements IModelMysql<T> {
             this._primaryKey = primaryKey;
             this._fields = fields;
         }
-        this._baseModel = new BaseModel<T>(this.table, this);
+        this._baseModel = new BaseModel<T>(this);
+        this._queryBuilder = new QueryBuilder(this);
+        this._mysqlUtils = new MySQLUtils(this);
         this.database = database.initialize();
     }
 
@@ -140,7 +151,7 @@ export abstract class Model<T> implements IModelMysql<T> {
         }
     }
 
-    public async beginTransaction(): Promise<{ commit: () => Promise<void>; rollback: () => Promise<void>; } | undefined> {
+    public async beginTransaction(): Promise<{ commit(): Promise<void>; rollback(): Promise<void>; } | undefined> {
         try {
             if (this.transaction) throw new Error("A transaction instance already exists for the same model");
             else {
@@ -213,9 +224,28 @@ export abstract class Model<T> implements IModelMysql<T> {
      * @param data 
      * @returns 
      */
-    public async create<C extends keyof T>(data: { columns: C[]; values: Required<Pick<T, C>> | Required<Pick<T, C>>[] }): Promise<IReturn> {
-        const sqlQuery: string = this.fillSqlQueryToInsert(data);
-        return await this.query(sqlQuery);
+    public async create<C extends keyof T>(data: { columns: C[]; values: Required<Pick<T, C>> }): Promise<IMethodReturn<T>>
+    public async create<C extends keyof T>(data: { columns: C[]; values: Required<Pick<T, C>>[] }): Promise<IReturn>
+    public async create<C extends keyof T>(data: { columns: C[]; values: any }): Promise<any> {
+        const sqlQuery: string = await this._queryBuilder.fillSqlQueryToInsert(data);
+        this.results = await this.query(sqlQuery);
+        if (!Array.isArray(data.values))
+            this.results.getInsert = async (): Promise<T> => {
+                const arrayKey = await this._mysqlUtils.getArrayKey();
+                if (arrayKey.length == 1)
+                    return <T>(await this.findId(this.results.insertId != 0 ? Number(this.results.insertId) : arrayKey[0]))[0];
+                else {
+                    if (arrayKey.length > 1) {
+                        const where: any = Object.fromEntries(
+                            Object.entries(data.values).filter(([key]) => arrayKey.includes(key))
+                        );
+                        return <T>(await this.find().where(where).build())[0];
+                    }
+                    else
+                        return <T>(await this.find().where(<any>data.values).build())[0];
+                }
+            }
+        return this.results
     }
 
     public find<K extends keyof T, L extends keyof T>(params?: TQueryFind<T, K, L>): Pick<BaseModel<T>, 'where' | 'join' | 'subQuery' | 'build'> {
@@ -251,7 +281,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async findId(params: Number): Promise<T>
     public async findId(params: any): Promise<any> {
         if (typeof params == 'number')
-            return (await this.query(`SELECT * FROM \`${this._table}\``))[0];
+            return (await this.query(`SELECT * FROM \`${this._table}\` WHERE \`${String(this.primaryKey)}\` = '${params}'`))[0];
         let sqlQuery = `SELECT `;
         let { columns, id, excludeColumns, alias }: { columns: any[], id: number, excludeColumns: any[], alias: any } = params;
         if (columns == undefined && excludeColumns == undefined && id != undefined)
@@ -263,10 +293,10 @@ export abstract class Model<T> implements IModelMysql<T> {
                     if (index != -1)
                         columns.splice(index, 1, `${item} AS "${alias[item]}"`);
                 }
-            sqlQuery += `${columns} \nFROM \`${this._table}\` \nWHERE id = '${id}'`;
+            sqlQuery += `${columns} \nFROM \`${this._table}\` \nWHERE \`${String(this.primaryKey)}\` = '${id}'`;
         }
         else if (excludeColumns != undefined && id != undefined)
-            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\` \nWHERE id = "${id}"`;
+            sqlQuery += `${this._fields.filter(column => !excludeColumns.includes(column))} \nFROM \`${this._table}\` \nWHERE \`${String(this.primaryKey)}\` = '${id}'`;
         else throw new Error("Parameters cannot be empty");
         return (await this.query(sqlQuery))[0];
     }
@@ -318,9 +348,9 @@ export abstract class Model<T> implements IModelMysql<T> {
      * 
      * @returns 
      */
-    public async update(param: { set: Partial<T>, where: { condition: Partial<T>, operator?: TCondition } }): Promise<IReturn> {
+    public async update(param: { set: Partial<T>, where: { condition: Partial<T>, operator?: TCondition } }): Promise<IMethodReturn<T>> {
         const { set, where } = param;
-        const sqlQuery: string = this.fillSqlQueryToUpdate(set, where);
+        const sqlQuery: string = await this._queryBuilder.fillSqlQueryToUpdate(set, where);
         return await this.query(sqlQuery);
     }
     /**
@@ -334,7 +364,7 @@ export abstract class Model<T> implements IModelMysql<T> {
     public async delete(where: number): Promise<IReturn>
     public async delete(where: { condition: Partial<T>, operator?: TCondition }): Promise<IReturn>
     public async delete(where: any): Promise<IReturn> {
-        const sqlQuery: string = this.fillSqlQueryToDelete(where);
+        const sqlQuery: string = await this._queryBuilder.fillSqlQueryToDelete(where);
         return await this.query(sqlQuery);
     }
 
@@ -350,35 +380,6 @@ export abstract class Model<T> implements IModelMysql<T> {
     }
 
     //#region Private methods
-
-    private fillSqlQueryToInsert<C extends keyof T>({ columns, values }: { columns: C[], values: any }): string {
-        if (values == undefined || columns == undefined || (Array.isArray(values) && values.length == 0))
-            throw new Error('Parameters cannot be empty or undefined');
-
-        let sqlQuery: string = `INSERT INTO \`${this._table}\`(${columns.map(column => `\`${<string>column}\``)}) `;
-        if (Array.isArray(values)) {
-            sqlQuery += `VALUES${values.map(item => `(${columns.map(column => `'${item[column]}'`)})`).join(', \n')}`;
-            return sqlQuery;
-        }
-        else {
-            sqlQuery += `VALUES(${columns.map(column => `'${values[column]}'`)})`;
-            return sqlQuery;
-        }
-    }
-
-    private fillSqlQueryToUpdate(data: any, where: { condition: any, operator?: TCondition }): string {
-        if (Object.entries(data).length == 0 || Object.entries(where.condition).length == 0) throw new Error("Parameters cannot be empty");
-
-        let sqlQuery = `UPDATE \`${this._table}\`\nSET ${Object.keys(data).map(key => `${key} = '${data[key]}'`)}\nWHERE ${Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
-        return sqlQuery;
-    }
-
-    private fillSqlQueryToDelete(where: { condition: any, operator?: TCondition } | number): string {
-        if (typeof where != 'number' && Object.entries(where.condition).length == 0)
-            throw new Error("Parameters cannot be empty");
-        let sqlQuery: string = `DELETE FROM \`${this._table}\`\nWHERE ${typeof where == 'number' ? `${String(this.primaryKey)} = '${where}'` : Object.keys(where.condition).map(key => `${key} = '${where.condition[key]}'`).join(`\n${where.operator || 'AND'} `)}`;
-        return sqlQuery;
-    }
 
     private destroyConnection(executeDestroyTransaction?: boolean) {
         if ((executeDestroyTransaction ?? this.executeDestroy) && this.connection) {
