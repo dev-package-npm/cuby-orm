@@ -105,6 +105,32 @@ type TCollationGeostd8 = 'GEOSTD8_GENERAL_CI' | 'GEOSTD8_BIN' | 'GEOSTD8_GENERAL
 type TCollationCp932 = 'CP932_JAPANESE_CI' | 'CP932_BIN' | 'CP932_JAPANESE_NOPAD_CI' | 'CP932_NOPAD_BIN';
 type TCollationEucjpms = 'EUCJPMS_JAPANESE_CI' | 'EUCJPMS_BIN' | 'EUCJPMS_JAPANESE_NOPAD_CI' | 'EUCJPMS_NOPAD_BIN';
 
+
+interface ISchemeColums {
+    TABLE_CATALOG: string,
+    TABLE_SCHEMA: string,
+    TABLE_NAME: string,
+    COLUMN_NAME: string,
+    ORDINAL_POSITION: number,
+    COLUMN_DEFAULT: string,
+    IS_NULLABLE: 'NO' | 'YES',
+    DATA_TYPE: string,
+    CHARACTER_MAXIMUM_LENGTH: null,
+    CHARACTER_OCTET_LENGTH: null,
+    NUMERIC_PRECISION: null,
+    NUMERIC_SCALE: null,
+    DATETIME_PRECISION: 0,
+    CHARACTER_SET_NAME: null,
+    COLLATION_NAME: null,
+    COLUMN_TYPE: string,
+    COLUMN_KEY: 'PRI' | 'MUL' | 'UNI',
+    EXTRA: string,
+    PRIVILEGES: string,
+    COLUMN_COMMENT: string,
+    IS_GENERATED: string,
+    GENERATION_EXPRESSION: null
+}
+
 //#endregion
 
 export {
@@ -119,5 +145,6 @@ export {
     TCompuestSentence,
     TCondition,
     TOperatorWhere,
-    TDirection
+    TDirection,
+    ISchemeColums
 };

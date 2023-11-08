@@ -1,7 +1,7 @@
 import ansiColors from "ansi-colors";
 import { Model } from "./models/model";
 import { TCollationCharset } from "./interfaces/forge.interface";
-import { ISchemeColums } from "./interfaces/mysql.model";
+import { ISchemeColums } from "./interfaces/sql";
 
 export default class SchemeMysql extends Model<any> {
     private sqlQuery: string = '';

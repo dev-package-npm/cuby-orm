@@ -1,9 +1,10 @@
-import { ISchemeColums } from "./interfaces/mysql.model";
-import { Model } from "./models/model";
+import { TArrayColumns } from "./interfaces/mysql.model";
+import { ISchemeColums } from "./interfaces/sql";
+import { BaseModel } from "./models/base-model";
 
 // Métodos específicos de MySQL, como obtener información sobre tablas, esquemas, etc.
 export class MySQLUtils<T> {
-    constructor(private model: Model<T>) { }
+    constructor(private model: BaseModel<T>) { }
 
     async getColumnScheme<T extends keyof ISchemeColums>({ scheme, table, database }: { scheme?: T[], table: string, database?: string }): Promise<Pick<ISchemeColums, T>[]> {
         const sqlQuery = `
@@ -25,6 +26,22 @@ export class MySQLUtils<T> {
                 result.push(schem.COLUMN_NAME);
         }
         return result;
+    }
+
+    public async getPrimaryKey() {
+        const keys = await this.getArrayKey();
+        if (keys && keys.length == 1) return keys[0];
+        return '';
+    }
+
+    public async getFields(): Promise<TArrayColumns<T>> {
+        const results = await this.getColumnScheme({ scheme: ['COLUMN_NAME'], table: this.model.table });
+
+        let columns: TArrayColumns<T> = [];
+        for (const column of results) {
+            columns.push(<any>(column.COLUMN_NAME));
+        }
+        return columns;
     }
 
 }

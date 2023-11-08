@@ -86,7 +86,7 @@ export class Database {
             }
             // Configurar entorno
             if (this._config != undefined) {
-                if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, env)) {
+                if (env !== undefined && this._config?.environments !== undefined && Object.hasOwn(this._config?.environments, String(env).toLocaleLowerCase())) {
                     this.setValue(this._config?.environments[env]);
                 } else
                     this.setValue(this._config);
