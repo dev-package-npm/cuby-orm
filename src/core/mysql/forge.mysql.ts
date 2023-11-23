@@ -2,14 +2,13 @@ import { Pool } from "pg";
 import { Database, PoolConnection } from "../database";
 import { TColumns, TForeignKey, TColumnsAttributes, TTableAttribute, TTforeignKeyStructure, TGetTableColumnAttribute, TGetTableAttribute } from "./interfaces/forge.interface";
 import { TCompuestSentence } from "./interfaces/sql";
+import { BaseModel } from "./models/base-model";
 
-const database = new Database();
-
-export class Forge<T> extends Database {
+export class Forge<T> {
     private _fields: string[] = [];
     private tableFields: string[] = [];
     private sqlQuery: string = '';
-    protected database: Database;
+    private model = new BaseModel();
 
     private readonly tableColumnsAttributes: TGetTableColumnAttribute<T>[] = [
         {
@@ -92,8 +91,6 @@ export class Forge<T> extends Database {
     private readonly addConstraintStr: TCompuestSentence = 'ADD CONSTRAINT';
 
     constructor() {
-        super();
-        this.database = database;
     }
 
     protected addField(fields: TColumns<T>) {
@@ -123,7 +120,7 @@ export class Forge<T> extends Database {
             this.sqlStr = '';
         }
         // console.log(this.sqlQuery);
-        return await this.query(this.sqlQuery);
+        return await this.model.query(this.sqlQuery);
     }
 
     protected async createTableIfNotExists(name: string, tableAttributes?: TTableAttribute) {
@@ -141,7 +138,7 @@ export class Forge<T> extends Database {
             this.sqlStr = '';
         }
         // console.log(this.sqlQuery);
-        return await this.query(this.sqlQuery);
+        return await this.model.query(this.sqlQuery);
     }
 
     protected async addForeignKey(table: string, data: TForeignKey<T>) {
@@ -160,21 +157,21 @@ export class Forge<T> extends Database {
 
     protected async dropTable(name: string) {
         this.sqlQuery = `${this.dropTableStr} \`${name}\``;
-        return await this.query(this.sqlQuery);
+        return await this.model.query(this.sqlQuery);
     }
 
     protected async dropTableIfExists(name: string) {
         this.sqlQuery = `${this.dropTableStr} ${this.ifExistsStr} \`${name}\``;
         // console.log(this.sqlQuery);
-        return await this.query(this.sqlQuery);
+        return await this.model.query(this.sqlQuery);
     }
 
     protected async enableForeignKeyChecks() {
-        return await this.query('SET FOREIGN_KEY_CHECKS=1');
+        return await this.model.query('SET FOREIGN_KEY_CHECKS=1');
     }
 
     protected async disableForeignKeyChecks() {
-        return await this.query('SET FOREIGN_KEY_CHECKS=0');
+        return await this.model.query('SET FOREIGN_KEY_CHECKS=0');
     }
 
     public orderFields(item: keyof TColumns<T> extends infer K ? K extends string ? K : never : never, fields: TColumns<T>) {
@@ -236,29 +233,6 @@ export class Forge<T> extends Database {
             }
         }
         return value;
-    }
-
-    private async query(sentence: string, values?: any): Promise<any> {
-        try {
-            let results;
-            await this.database.initialize();
-            switch (this.database.type) {
-                case 'mysql':
-                    const connected = await this.database.getConnection() as PoolConnection;
-                    results = await connected.query(sentence, values);
-                    connected.release();
-                    connected.destroy();
-                    return results;
-                    break;
-                case 'postgresql':
-                    const pool = await this.database.getConnection() as Pool;
-                    results = await pool.query(sentence, values);
-                    return results.rows;
-                    break;
-            }
-        } catch (error: any) {
-            throw new Error(error.message);
-        }
     }
 
     private validateAttributeColumns(attribute: keyof TColumnsAttributes<T>, fields: TColumnsAttributes<T>) {

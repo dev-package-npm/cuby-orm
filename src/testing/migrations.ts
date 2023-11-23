@@ -78,12 +78,11 @@ export class User extends Migration<IUser> {
 
             this.addField(this.fields);
 
-            this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
-            this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
+            await this.addForeignKey(this.table, { column: 'user_id', references: { column: 'id', table: 'users1' }, onDelete: 'CASCADE' });
+            await this.addForeignKey(this.table, { column: 'city_id', references: { column: 'id', table: 'city' } });
 
             await this.createTableIfNotExists(this.table, { engine: 'InnoDB', auto_icrement: 0, charset: 'UTF8', collation: 'UTF8_GENERAL_CI', comment: 'Usuarios de prueba1' });
         } catch (error: any) {
-            console.log(error.message);
             throw new Error(error.message);
         }
     }
@@ -92,7 +91,6 @@ export class User extends Migration<IUser> {
         try {
             await this.dropTableIfExists(this.table);
         } catch (error: any) {
-            console.log(error.message);
             throw new Error(error.message);
         }
     }

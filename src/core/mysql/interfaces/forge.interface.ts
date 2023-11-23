@@ -16,7 +16,6 @@ type TColumnsAttributes<T> = {
     comment?: string,
     foreignKey?: Omit<TForeignKey<T>, 'column'>;
 } & TCollationCharset;
-
 //#region  Tcollation charset
 export type TCollationCharset = (
     {

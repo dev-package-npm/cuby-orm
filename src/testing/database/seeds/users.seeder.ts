@@ -1,4 +1,4 @@
-import { Seeder } from "../../../core/seeds/seeder";
+import { Seeder } from "../../../core/mysql/seeder";
 
 export class UsersSeeder extends Seeder {
     async run() {

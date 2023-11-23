@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import MakeModel from '../make/make-model';
 import { Mixin } from 'ts-mixer';
-import { Seeder } from '../core/seeds/seeder';
+import { Seeder } from '../core/mysql/seeder';
 import { packageName } from '../core/common';
 import moment from 'moment';
 import SchemeMysql from '../core/mysql/scan-scheme.mysql';

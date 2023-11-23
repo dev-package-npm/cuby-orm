@@ -1,3 +1,4 @@
+import { TForeignKey } from "../core/mysql/interfaces/forge.interface";
 import { EntityModel } from "../core/mysql/models/entity-model";
 import { ClaveDiferenteModel } from "./models/clave-diferente.model";
 import { NewtableModel } from "./models/newtable.model";
