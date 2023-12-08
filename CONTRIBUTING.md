@@ -7,8 +7,6 @@
 
 * [Comandos importantes](#Comandos importantes)
 
-Token `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`
-
 Clonar el repositorio desde la rama development.
 
 ```
